@@ -1,0 +1,17 @@
+{
+  "task_type": "coding",
+  "model": "google.gemma-3-4b-it",
+  "num_agents": 3,
+  "task_range": [
+    1,
+    20
+  ],
+  "modes": [
+    "llmamem"
+  ],
+  "csv": "/home/jason/MARBLE/marble/result/llmamem_coding_20/lifelong_metrics.csv",
+  "plot_ap": "/home/jason/MARBLE/marble/result/llmamem_coding_20/lifelong_ap_curve.png",
+  "plot_ap_error": "",
+  "plot_j": "/home/jason/MARBLE/marble/result/llmamem_coding_20/lifelong_j_curve.png",
+  "plot_j_error": ""
+}
