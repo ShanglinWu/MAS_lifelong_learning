@@ -32,7 +32,7 @@ def _get_bedrock_client():
     if _bedrock_client is None:
         with _bedrock_lock:
             if _bedrock_client is None:
-                region = os.environ.get("AWS_REGION", "us-east-1")
+                region = os.environ.get("AWS_REGION", "us-west-2")
                 _bedrock_client = boto3.client(
                     "bedrock-runtime", region_name=region
                 )
@@ -270,8 +270,8 @@ def model_prompting(
         # Bedrock clamps temperature; 0.0 is valid
         inference_config["temperature"] = temperature
     
-    if top_p is not None:
-        inference_config["topP"] = top_p
+    # if top_p is not None:
+    #     inference_config["topP"] = top_p
     if inference_config:
         kwargs["inferenceConfig"] = inference_config
 

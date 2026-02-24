@@ -312,6 +312,37 @@ def load_last_jsonl_record(path: Path) -> Dict[str, Any]:
         return {}
 
 
+def _est_tokens(text: str) -> int:
+    if not text:
+        return 0
+    return max(1, (len(text) + 3) // 4)
+
+
+def estimate_tokens_from_summary(summary: Dict[str, Any]) -> Tuple[int, int, int]:
+    input_tokens = 0
+    output_tokens = 0
+
+    input_tokens += _est_tokens(str(summary.get("task", "")))
+
+    for it in summary.get("iterations", []) or []:
+        if not isinstance(it, dict):
+            continue
+        task_assignments = it.get("task_assignments", {}) or {}
+        if isinstance(task_assignments, dict):
+            for prompt in task_assignments.values():
+                input_tokens += _est_tokens(str(prompt))
+
+        task_results = it.get("task_results", []) or []
+        if isinstance(task_results, list):
+            for tr in task_results:
+                if isinstance(tr, dict):
+                    output_tokens += _est_tokens(str(tr.get("result", "")))
+
+        output_tokens += _est_tokens(str(it.get("summary", "")))
+
+    return input_tokens, output_tokens, input_tokens + output_tokens
+
+
 def load_latest_minecraft_block_hit_rate(repo_root: Path) -> float:
     score_path = repo_root / "data" / "score.json"
     if not score_path.exists():
@@ -487,6 +518,12 @@ def main() -> int:
                 ts, cs, j = extract_task_scores(
                     summary, args.task_type, args.db_eval_model
                 )
+                input_tokens, output_tokens, total_tokens = estimate_tokens_from_summary(
+                    summary
+                )
+                token_usage = summary.get("token_usage", -1)
+                if not isinstance(token_usage, (int, float)):
+                    token_usage = -1
                 status = "ok" if proc.returncode == 0 else "run_failed"
                 row = {
                     "mode": mode,
@@ -495,6 +532,10 @@ def main() -> int:
                     "ts": round(ts, 4),
                     "cs": round(cs, 4),
                     "j": round(j, 4),
+                    "token_usage": int(token_usage) if token_usage >= 0 else -1,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
                     "returncode": proc.returncode,
                 }
                 if proc.returncode != 0:
@@ -517,6 +558,10 @@ def main() -> int:
                         "ts": round(ts, 4) if ts >= 0 else -1.0,
                         "cs": round(cs, 4) if cs >= 0 else -1.0,
                         "j": round(j, 4) if j >= 0 else -1.0,
+                        "token_usage": -1,
+                        "input_tokens": -1,
+                        "output_tokens": -1,
+                        "total_tokens": -1,
                         "returncode": -2,
                     }
                 )
@@ -559,6 +604,10 @@ def main() -> int:
             "j",
             "ap_t",
             "aip",
+            "token_usage",
+            "input_tokens",
+            "output_tokens",
+            "total_tokens",
             "returncode",
             "stderr_tail",
         ]

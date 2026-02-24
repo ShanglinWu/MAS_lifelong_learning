@@ -7,6 +7,32 @@ from ruamel.yaml import YAML
 from marble.llms.model_prompting import model_prompting
 
 
+def _resolve_coding_config_path() -> str:
+    """
+    Resolve coding config path robustly regardless of current working directory.
+    """
+    candidates = []
+
+    # Optional explicit override.
+    env_path = os.getenv("MARBLE_CODING_CONFIG")
+    if env_path:
+        candidates.append(env_path)
+
+    # Repository-root based path (this file: marble/environments/coding_utils/coder.py).
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    candidates.append(
+        os.path.join(repo_root, "marble", "configs", "coding_config", "coding_config.yaml")
+    )
+
+    # Backward-compatible relative path (works when cwd is repo root).
+    candidates.append("marble/configs/coding_config/coding_config.yaml")
+
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return candidates[0]
+
+
 def create_solution_handler(
     env, task_description: str, model_name: str, file_path: str = "solution.py"
 ) -> Dict[str, Any]:
@@ -37,7 +63,7 @@ def create_solution_handler(
                 "error-msg": f"Solution file already exists at {full_path}. Operation aborted.",
             }
 
-        config_path = "marble/configs/coding_config/coding_config.yaml"
+        config_path = _resolve_coding_config_path()
         if not os.path.exists(config_path):
             return {
                 "success": False,

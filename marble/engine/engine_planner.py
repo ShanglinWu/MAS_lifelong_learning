@@ -454,6 +454,9 @@ class EnginePlanner:
         Returns:
             bool: True to continue, False to terminate.
         """
+        if not agents_results:
+            return True
+
         prompt = (
             "Based on the following agents' results, determine whether the overall task is completed.\n\n"
             f"Task Description:\n{self.task}\n\n"
@@ -463,15 +466,12 @@ class EnginePlanner:
             prompt += f"- {result}\n"[:500]
 
         prompt += (
-            "\nRespond with a JSON object containing a single key 'continue' set to true or false.\n"
-            "Sometimes the results may include a key 'success' with a value of true, but that only indicates the tool executed successfully, "
-            "not that the task is complete.\n"
-            "If there meets an error of the results and unfinished, please respond with a JSON object containing a single key 'continue' set to True.\n"
-            "Analyze the results and decide whether the task should continue or be terminated.\n"
-            "Example:\n"
-            "{\n"
-            '  "continue": true\n'
-            "}"
+            "\nYou MUST respond with ONLY a JSON object and nothing else — no markdown, no explanation, no code fences.\n"
+            "The JSON must contain exactly one key: 'continue', set to true or false.\n"
+            "A 'success' key in the results only means the tool ran — it does NOT mean the task is complete.\n"
+            "If results contain errors or the task is unfinished, set 'continue' to true.\n"
+            "Your entire response must be exactly this format:\n"
+            '{"continue": true}'
         )
 
         messages = [{"role": "system", "content": prompt}]
@@ -491,7 +491,7 @@ class EnginePlanner:
             # decision = json.loads(response[0].content if response[0].content else "")
             decision = json_parse(response[0].content)
             self.logger.debug(f"Received continuation decision: {decision}")
-            return decision.get("continue", False)
-        except json.JSONDecodeError as e:
+            return decision.get("continue", True)
+        except (json.JSONDecodeError, ValueError) as e:
             self.logger.error(f"Failed to parse JSON decision response: {e}")
-            return False
+            return True

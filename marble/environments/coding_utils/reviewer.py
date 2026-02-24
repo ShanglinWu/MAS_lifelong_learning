@@ -9,6 +9,32 @@ from ruamel.yaml import YAML
 from marble.llms.model_prompting import model_prompting
 
 
+def _resolve_coding_config_path() -> str:
+    """
+    Resolve coding config path robustly regardless of current working directory.
+    """
+    candidates = []
+
+    # Optional explicit override.
+    env_path = os.getenv("MARBLE_CODING_CONFIG")
+    if env_path:
+        candidates.append(env_path)
+
+    # Repository-root based path (this file: marble/environments/coding_utils/reviewer.py).
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    candidates.append(
+        os.path.join(repo_root, "marble", "configs", "coding_config", "coding_config.yaml")
+    )
+
+    # Backward-compatible relative path (works when cwd is repo root).
+    candidates.append("marble/configs/coding_config/coding_config.yaml")
+
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return candidates[0]
+
+
 def log_debug_info(message: str, log_file: str = "marble/logs/advice_log"):
     """
     Log debug information to a specified file.
@@ -56,7 +82,7 @@ def give_advice_and_revise_handler(
                 "error-msg": "Solution file is empty or contains invalid code. Please use create_solution first to generate valid code",
             }
 
-        config_path = "marble/configs/coding_config/coding_config.yaml"
+        config_path = _resolve_coding_config_path()
         if not os.path.exists(config_path):
             return {
                 "success": False,

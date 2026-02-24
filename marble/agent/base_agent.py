@@ -12,6 +12,15 @@ from marble.llms.model_prompting import model_prompting
 from marble.memory import BaseMemory, SharedMemory
 from marble.memory.llma_mem import LLMAMemManager
 from marble.utils.logger import get_logger
+from litellm import token_counter
+
+
+def _safe_token_count(model: str, messages: list) -> int:
+    """Count tokens safely, returning 0 if the model ID is not recognized (e.g. Bedrock)."""
+    try:
+        return token_counter(model=model, messages=messages)
+    except Exception:
+        return 0
 
 EnvType = Union[BaseEnvironment, WebEnvironment, CodingEnvironment]
 AgentType = TypeVar("AgentType", bound="BaseAgent")
@@ -167,34 +176,35 @@ class BaseAgent:
             f"{agent_id} ({info['role']} - {info['profile']})"
             for agent_id, info in available_agents.items()
         ]
-        # Add communicate_to function description
-        new_communication_session_description = {
-            "type": "function",
-            "function": {
-                "name": "new_communication_session",
-                "description": "Send a message to a specific target agent based on existing relationships, and begin communication",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "target_agent_id": {
-                            "type": "string",
-                            "description": "The ID of the target agent to communicate with. Available agents:\n"
-                            + "\n".join([f"- {desc}" for desc in agent_descriptions]),
-                            "enum": list(
-                                self.relationships.keys()
-                            ),  # Dynamically list available target agents
+        # Add communicate_to function description only when there are connected agents
+        if available_agents:
+            new_communication_session_description = {
+                "type": "function",
+                "function": {
+                    "name": "new_communication_session",
+                    "description": "Send a message to a specific target agent based on existing relationships, and begin communication",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "target_agent_id": {
+                                "type": "string",
+                                "description": "The ID of the target agent to communicate with. Available agents:\n"
+                                + "\n".join([f"- {desc}" for desc in agent_descriptions]),
+                                "enum": list(
+                                    available_agents.keys()
+                                ),  # Dynamically list available target agents
+                            },
+                            "message": {
+                                "type": "string",
+                                "description": "The initial message to send to the target agent",
+                            },
                         },
-                        "message": {
-                            "type": "string",
-                            "description": "The initial message to send to the target agent",
-                        },
+                        "required": ["target_agent_id", "message"],
+                        "additionalProperties": False,
                     },
-                    "required": ["target_agent_id", "message"],
-                    "additionalProperties": False,
                 },
-            },
-        }
-        tools.append(new_communication_session_description)
+            }
+            tools.append(new_communication_session_description)
         reasoning_prompt = self.reasoning_prompts.get(self.strategy, "")
         self.logger.info(
             f"Agent {self.agent_id} using {self.strategy} strategy with prompt:\n{reasoning_prompt}"
@@ -540,7 +550,7 @@ class BaseAgent:
                 {"role": "user", "content": communicate_task},
                 {"role": "system", "content": result.content},
             ]
-            self.token_usage += token_counter(model=self.llm, messages=messages)
+            self.token_usage += _safe_token_count(model=self.llm, messages=messages)
             if result.tool_calls:
                 function_call = result.tool_calls[0]
                 function_name = function_call.function.name
@@ -590,7 +600,7 @@ class BaseAgent:
             {"role": "user", "content": summary_task},
             {"role": "system", "content": result.content},
         ]
-        self.token_usage += token_counter(model=self.llm, messages=messages)
+        self.token_usage += _safe_token_count(model=self.llm, messages=messages)
         self.memory.update(
             self.agent_id,
             {
@@ -699,7 +709,7 @@ class BaseAgent:
             },
             {"role": "system", "content": next_task},
         ]
-        self.token_usage += token_counter(model=self.llm, messages=messages)
+        self.token_usage += _safe_token_count(model=self.llm, messages=messages)
         self.logger.info(
             f"Agent '{self.agent_id}' plans next task based on persona: {next_task}"
         )
@@ -803,7 +813,7 @@ class BaseAgent:
             {"role": "system", "content": prompt},
             {"role": "system", "content": response.content},
         ]
-        self.token_usage += token_counter(model=self.llm, messages=messages)
+        self.token_usage += _safe_token_count(model=self.llm, messages=messages)
         try:
             tasks_for_children: Dict[str, Any] = json.loads(
                 response.content if response.content else "{}"
@@ -847,7 +857,7 @@ class BaseAgent:
             {"role": "system", "content": prompt},
             {"role": "system", "content": summary},
         ]
-        self.token_usage += token_counter(model=self.llm, messages=messages)
+        self.token_usage += _safe_token_count(model=self.llm, messages=messages)
         return summary
 
     def plan_next_agent(
@@ -891,7 +901,7 @@ class BaseAgent:
             temperature=0.7,
             top_p=1.0,
         )[0].content
-        self.token_usage += token_counter(
+        self.token_usage += _safe_token_count(
             model=self.llm,
             messages=[
                 {"role": "system", "content": prompt},
