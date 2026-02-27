@@ -24,11 +24,23 @@ import yaml
 
 
 TASK_TYPES = {"coding", "research", "db", "minecraft"}
+SUPPORTED_MODES = {"baseline", "llmamem", "amem"}
+
+
+def _parse_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    lowered = str(value).strip().lower()
+    if lowered in {"1", "true", "t", "yes", "y", "on"}:
+        return True
+    if lowered in {"0", "false", "f", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run lifelong experiments (baseline vs LLMA-Mem)."
+        description="Run lifelong experiments (baseline, LLMA-Mem, A-MEM)."
     )
     parser.add_argument("--model", default="google.gemma-3-4b-it")
     parser.add_argument("--task_type", choices=sorted(TASK_TYPES), default="coding")
@@ -53,7 +65,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--modes",
         default="baseline,llmamem",
-        help="Comma-separated modes. Supported: baseline,llmamem",
+        help="Comma-separated modes. Supported: baseline,llmamem,amem",
     )
     parser.add_argument("--consolidation_interval", type=int, default=2)
     parser.add_argument(
@@ -67,6 +79,46 @@ def parse_args() -> argparse.Namespace:
         choices=["local", "shared", "hybrid"],
         default="local",
         help="LLMA-Mem topology to use in llmamem mode.",
+    )
+    parser.add_argument(
+        "--amem_topology",
+        choices=["local", "shared"],
+        default="local",
+        help="A-MEM topology to use in amem mode.",
+    )
+    parser.add_argument(
+        "--amem_evolution_enabled",
+        type=_parse_bool,
+        default=True,
+        help="Whether A-MEM runs LLM-driven evolution logic (default: true).",
+    )
+    parser.add_argument(
+        "--amem_evolution_threshold",
+        type=int,
+        default=100,
+        help="Consolidation threshold for A-MEM evolution.",
+    )
+    parser.add_argument(
+        "--amem_embedding_model",
+        default="all-MiniLM-L6-v2",
+        help="A-MEM embedding model used by ChromaDB.",
+    )
+    parser.add_argument(
+        "--amem_llm_backend",
+        choices=["openai", "ollama"],
+        default="openai",
+        help="A-MEM evolution backend.",
+    )
+    parser.add_argument(
+        "--amem_llm_model",
+        default="gpt-4o-mini",
+        help="A-MEM evolution model name.",
+    )
+    parser.add_argument(
+        "--amem_retrieval_k",
+        type=int,
+        default=5,
+        help="Top-k memories to inject from A-MEM into prompts.",
     )
     parser.add_argument(
         "--use_poetry",
@@ -331,6 +383,58 @@ def load_latest_minecraft_block_hit_rate(repo_root: Path) -> float:
     return float(val) * 100.0
 
 
+def apply_memory_mode_config(
+    data: Dict[str, Any],
+    mode: str,
+    consolidation_interval: int,
+    llma_topology: str,
+    amem_topology: str,
+    amem_evolution_enabled: bool,
+    amem_evolution_threshold: int,
+    amem_embedding_model: str,
+    amem_llm_backend: str,
+    amem_llm_model: str,
+    amem_retrieval_k: int,
+) -> Dict[str, Any]:
+    if mode not in SUPPORTED_MODES:
+        raise ValueError(f"Unsupported mode '{mode}'. Supported: {sorted(SUPPORTED_MODES)}")
+
+    memory = data.setdefault("memory", {})
+    if not isinstance(memory, dict):
+        memory = {}
+        data["memory"] = memory
+
+    llma_mem = memory.setdefault("llma_mem", {})
+    if not isinstance(llma_mem, dict):
+        llma_mem = {}
+        memory["llma_mem"] = llma_mem
+
+    amem = memory.setdefault("amem", {})
+    if not isinstance(amem, dict):
+        amem = {}
+        memory["amem"] = amem
+
+    llma_enabled = mode == "llmamem"
+    amem_enabled = mode == "amem"
+
+    llma_mem["enabled"] = llma_enabled
+    llma_mem["topology"] = llma_topology
+    llma_mem["consolidation_interval"] = consolidation_interval
+    llma_mem.setdefault("auto_embedding", True)
+    llma_mem.setdefault("embedding_model", "amazon.titan-embed-text-v2:0")
+
+    amem["enabled"] = amem_enabled
+    amem["topology"] = amem_topology
+    amem["evolution_enabled"] = bool(amem_evolution_enabled)
+    amem["evolution_threshold"] = int(amem_evolution_threshold)
+    amem["embedding_model"] = amem_embedding_model
+    amem["llm_backend"] = amem_llm_backend
+    amem["llm_model"] = amem_llm_model
+    amem["retrieval_k"] = int(amem_retrieval_k)
+
+    return data
+
+
 def run_one_task(
     repo_root: Path,
     marble_dir: Path,
@@ -338,12 +442,19 @@ def run_one_task(
     tmp_config: Path,
     output_path_rel_to_marble: str,
     model: str,
-    llma_mem_enabled: bool,
+    mode: str,
     consolidation_interval: int,
     timeout_sec: int,
     use_poetry: bool,
     num_agents: int,
     llma_topology: str,
+    amem_topology: str,
+    amem_evolution_enabled: bool,
+    amem_evolution_threshold: int,
+    amem_embedding_model: str,
+    amem_llm_backend: str,
+    amem_llm_model: str,
+    amem_retrieval_k: int,
 ) -> subprocess.CompletedProcess[str]:
     data = yaml.safe_load(src_config.read_text(encoding="utf-8"))
     data["llm"] = model
@@ -368,14 +479,19 @@ def run_one_task(
                 and rel[1] in kept_ids
             ]
 
-    memory = data.setdefault("memory", {})
-    llma_mem = memory.setdefault("llma_mem", {})
-    llma_mem["enabled"] = bool(llma_mem_enabled)
-    if llma_mem_enabled:
-        llma_mem["topology"] = llma_topology
-        llma_mem["consolidation_interval"] = consolidation_interval
-        llma_mem.setdefault("auto_embedding", True)
-        llma_mem.setdefault("embedding_model", "amazon.titan-embed-text-v2:0")
+    apply_memory_mode_config(
+        data=data,
+        mode=mode,
+        consolidation_interval=consolidation_interval,
+        llma_topology=llma_topology,
+        amem_topology=amem_topology,
+        amem_evolution_enabled=amem_evolution_enabled,
+        amem_evolution_threshold=amem_evolution_threshold,
+        amem_embedding_model=amem_embedding_model,
+        amem_llm_backend=amem_llm_backend,
+        amem_llm_model=amem_llm_model,
+        amem_retrieval_k=amem_retrieval_k,
+    )
 
     output = data.setdefault("output", {})
     output["format"] = "jsonl"
@@ -422,7 +538,7 @@ def main() -> int:
     config_dir = repo_root / args.config_dir
     result_root = repo_root / args.result_root
     modes = [m.strip() for m in args.modes.split(",") if m.strip()]
-    supported = {"baseline", "llmamem"}
+    supported = SUPPORTED_MODES
     for mode in modes:
         if mode not in supported:
             raise ValueError(f"Unsupported mode: {mode}. Supported: {sorted(supported)}")
@@ -438,7 +554,6 @@ def main() -> int:
     task_ids = list(range(args.task_start, args.task_end + 1))
 
     for mode in modes:
-        llma_mem_enabled = mode == "llmamem"
         mode_dir = result_root / mode
         mode_dir.mkdir(parents=True, exist_ok=True)
 
@@ -476,12 +591,19 @@ def main() -> int:
                     tmp_config=tmp_config,
                     output_path_rel_to_marble=str(output_abs),
                     model=args.model,
-                    llma_mem_enabled=llma_mem_enabled,
+                    mode=mode,
                     consolidation_interval=args.consolidation_interval,
                     timeout_sec=args.timeout_sec,
                     use_poetry=use_poetry,
                     num_agents=args.num_agents,
                     llma_topology=args.llma_topology,
+                    amem_topology=args.amem_topology,
+                    amem_evolution_enabled=args.amem_evolution_enabled,
+                    amem_evolution_threshold=args.amem_evolution_threshold,
+                    amem_embedding_model=args.amem_embedding_model,
+                    amem_llm_backend=args.amem_llm_backend,
+                    amem_llm_model=args.amem_llm_model,
+                    amem_retrieval_k=args.amem_retrieval_k,
                 )
                 summary = load_last_jsonl_record(output_abs)
                 ts, cs, j = extract_task_scores(

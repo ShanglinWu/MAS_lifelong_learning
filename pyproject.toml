@@ -44,6 +44,11 @@ types-setuptools = "*"
 pytest = "*"
 pytest-asyncio = "*"
 
+[tool.poetry.group.amem.dependencies]
+chromadb = ">=0.4.22"
+sentence-transformers = ">=2.2.2"
+openai = ">=1.3.7"
+
 
 [build-system]
 requires = ["poetry-core"]

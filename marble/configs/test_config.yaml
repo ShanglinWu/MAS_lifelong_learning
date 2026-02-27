@@ -39,6 +39,15 @@ agents:
 
 memory:
   type: SharedMemory
+  amem:
+    enabled: false
+    topology: local
+    evolution_enabled: true
+    evolution_threshold: 100
+    embedding_model: all-MiniLM-L6-v2
+    llm_backend: openai
+    llm_model: gpt-4o-mini
+    retrieval_k: 5
   # Additional memory configurations if needed
 
 metrics:

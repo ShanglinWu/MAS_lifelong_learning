@@ -121,6 +121,15 @@ memory:
     consolidation_interval: 10
     auto_embedding: true
     embedding_model: amazon.titan-embed-text-v2:0
+  amem:
+    enabled: false
+    topology: local
+    evolution_enabled: true
+    evolution_threshold: 100
+    embedding_model: all-MiniLM-L6-v2
+    llm_backend: openai
+    llm_model: gpt-4o-mini
+    retrieval_k: 5
 metrics:
   evaluate_llm: gpt-4o
   code_quality: true

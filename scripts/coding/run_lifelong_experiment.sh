@@ -9,3 +9,16 @@ python scripts/coding/run_lifelong_experiment.py \
   --task_end 10 \
   --modes "baseline,llmamem"
 
+# Example: run A-MEM only
+# python scripts/coding/run_lifelong_experiment.py \
+#   --model "google.gemma-3-4b-it" \
+#   --task_start 1 \
+#   --task_end 10 \
+#   --modes "amem"
+
+# Example: three-way comparison
+# python scripts/coding/run_lifelong_experiment.py \
+#   --model "google.gemma-3-4b-it" \
+#   --task_start 1 \
+#   --task_end 10 \
+#   --modes "baseline,llmamem,amem"

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from marble.agent import BaseAgent
 from marble.configs.config import Config
+from marble.engine.memory_selection import resolve_advanced_memory_mode
 from marble.engine.engine_planner import EnginePlanner
 from marble.environments import (
     BaseEnvironment,
@@ -109,8 +110,8 @@ class Engine:
             agent.set_agent_graph(self.graph)
         # Initialize Memory
         self.memory = self._initialize_memory(config.memory)
-        # Initialize LLMA-Mem if configured
-        self._initialize_llma_mem(config.memory)
+        # Initialize advanced memory systems (LLMA-Mem or A-MEM) if configured.
+        self._initialize_advanced_memory(config.memory)
         # Initialize Evaluator
         self.evaluator = Evaluator(metrics_config=config.metrics)
         self.task = config.task.get("content", "")
@@ -230,6 +231,18 @@ class Engine:
         self.logger.debug(f"Memory of type '{memory_type}' initialized.")
         return memory
 
+    def _initialize_advanced_memory(self, memory_config: Dict[str, Any]) -> None:
+        """
+        Initialize advanced memory backends for agents.
+
+        Exactly one of llma_mem / amem can be enabled at a time.
+        """
+        mode = resolve_advanced_memory_mode(memory_config)
+        if mode == "llmamem":
+            self._initialize_llma_mem(memory_config)
+        elif mode == "amem":
+            self._initialize_amem(memory_config)
+
     def _initialize_llma_mem(self, memory_config: Dict[str, Any]) -> None:
         """
         Initialize LLMA-Mem for all agents if configured.
@@ -246,7 +259,7 @@ class Engine:
         topo_manager = MemoryTopologyManager(topology)
 
         for agent in self.agents:
-                agent.llma_mem = LLMAMemManager(
+            agent.llma_mem = LLMAMemManager(
                 agent_id=agent.agent_id,
                 topology_manager=topo_manager,
                 consolidation_interval=llma_config.get("consolidation_interval", 2),
@@ -258,6 +271,84 @@ class Engine:
 
         self.logger.info(
             f"LLMA-Mem initialized with '{topology_str}' topology for {len(self.agents)} agents."
+        )
+
+    def _initialize_amem(self, memory_config: Dict[str, Any]) -> None:
+        """
+        Initialize A-MEM for all agents if configured.
+
+        Uses lazy imports so baseline/LLMA-Mem paths do not require A-MEM deps.
+        """
+        amem_config = memory_config.get("amem", {})
+        if not amem_config.get("enabled", False):
+            return
+
+        try:
+            from marble.memory.amem import (
+                AMEMManager,
+                AMEMTopology,
+                AMEMTopologyManager,
+                ensure_amem_dependencies,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "A-MEM integration is enabled, but MARBLE could not import "
+                "the A-MEM modules. Install dependencies with "
+                "`poetry install --with amem`."
+            ) from exc
+
+        try:
+            ensure_amem_dependencies()
+        except Exception as exc:
+            raise RuntimeError(
+                "A-MEM integration is enabled but runtime dependencies are missing. "
+                "Install with `poetry install --with amem`."
+            ) from exc
+
+        if amem_config.get("evolution_enabled", True):
+            backend = amem_config.get("llm_backend", "openai")
+            if backend == "openai":
+                try:
+                    import openai  # noqa: F401
+                except Exception as exc:
+                    raise RuntimeError(
+                        "A-MEM evolution is enabled with llm_backend=openai, "
+                        "but the OpenAI package is unavailable. Install with "
+                        "`poetry install --with amem`."
+                    ) from exc
+
+        topology_str = amem_config.get("topology", "local")
+        try:
+            topology = AMEMTopology(topology_str)
+        except Exception as exc:
+            raise ValueError(
+                f"Unsupported A-MEM topology '{topology_str}'. "
+                "Supported: local, shared."
+            ) from exc
+
+        topo_manager = AMEMTopologyManager(
+            topology=topology,
+            embedding_model=amem_config.get("embedding_model", "all-MiniLM-L6-v2"),
+            llm_backend=amem_config.get("llm_backend", "openai"),
+            llm_model=amem_config.get("llm_model", "gpt-4o-mini"),
+            evolution_enabled=amem_config.get("evolution_enabled", True),
+            evolution_threshold=amem_config.get("evolution_threshold", 100),
+            collection_prefix=amem_config.get("collection_prefix", "amem"),
+            api_key=amem_config.get("api_key"),
+        )
+
+        retrieval_k = int(amem_config.get("retrieval_k", 5))
+        for agent in self.agents:
+            # Reuse BaseAgent's existing llma_mem hook by providing the same
+            # public methods (`record_episode`, `get_memory_context_str`).
+            agent.llma_mem = AMEMManager(
+                agent_id=agent.agent_id,
+                topology_manager=topo_manager,
+                retrieval_k=retrieval_k,
+            )
+
+        self.logger.info(
+            f"A-MEM initialized with '{topology_str}' topology for {len(self.agents)} agents."
         )
 
     def graph_coordinate(self) -> None:
