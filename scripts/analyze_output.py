@@ -62,15 +62,14 @@ def is_failed(record: Dict[str, Any]) -> bool:
 
 def compute_ts(record: Dict[str, Any]) -> Optional[float]:
     """
-    TS = avg(non-1 dimension scores) * 20.
-    Any dimension score that equals 1 is excluded from the average.
-    Returns None if task_evaluation is missing or no valid (non-1) scores remain.
+    TS = avg(executability, instruction_following, consistency, quality) * 20.
+    Returns None if task_evaluation is missing or all three fields are absent.
     """
     te = record.get("task_evaluation")
     if not isinstance(te, dict):
         return None
     keys = ["executability", "instruction_following", "consistency", "quality"]
-    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float)) and te[k] != 1]
+    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float))]
     if not values:
         return None
     return (sum(values) / len(values)) * 20
@@ -178,7 +177,7 @@ def analyze(path: str) -> None:
     print(f"{'='*88}")
     print()
     print("Summary")
-    print(f"  TS  = avg(dimension scores, skipping any 1s) × 20")
+    print(f"  TS  = avg(executability + instruction_following + consistency + quality) × 20")
     print(f"  CS  = avg(planning_scores + communication_scores, skip -1) × 20")
     print(f"  AP_t = (1/t) * sum(TS_1 .. TS_t)   [running avg of TS across first t passed tasks]")
     print(f"  AIP  = (1/T) * sum(AP_1 .. AP_T)   [mean of all AP_t values]")

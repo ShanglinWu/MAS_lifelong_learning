@@ -112,7 +112,7 @@ def create_solution_handler(
                 {"role": "user", "content": user_prompt},
             ],
             return_num=1,
-            max_token_num=16384,
+            max_token_num=8192,
             temperature=0.7,
         )[0]
 
@@ -202,7 +202,7 @@ def revise_solution_handler(env, task_description: str, model_name: str, file_pa
                 {"role": "user", "content": user_prompt}
             ],
             return_num=1,
-            max_token_num=16384,
+            max_token_num=8192,
             temperature=0.7
         )[0]
 

@@ -572,7 +572,7 @@ class Evaluator:
 
                     ### **Evaluation Criteria**
                     1. **Instruction-Following:** Does the code fulfill all the requirements of the task? Deduct points for unmet or partially met requirement from the task instructions.
-                    2. **Executability:** Is the code syntactically correct and executable? Deduct points for any syntax errors, missing imports, or runtime errors. You should ignore tiny formatting issues(wrong intend, or markdow pieces like ```python) and focus on code correctness and executability.
+                    2. **Executability:** Is the code syntactically correct and executable? You should ignore formatting issues(wrong intend, or markdow pieces like ```python) and focus on content correctness.
                     3. **Consistency:** Is the code consistent in variable naming, formatting, and logic? Deduct points for inconsistent variable naming, formatting issues, or contradictory logic.
                     4. **Quality:** Is the code well-documented, clear, and modular? Deduct points for poor documentation, unclear logic, or lack of modular design.
 
@@ -583,8 +583,8 @@ class Evaluator:
                     - **4 points:** Excellent - Almost or fully satisfies the criterion.
                     - **5 points:** Legendary - Flawless, perfectly satisfies the criterion, and exceeds expectations.
 
-                    **Do not give the same scores for different criteria, such as 3 for instruction-following, 3 for executability, 3 for consistency, and 3 for quality.**
-                    If you give the same scores for the 4 criteria, you have to add or deduct 1 point randomly for one or two criteria.
+
+
 
                     ### **Question**
                     Based on the criteria, evaluate the code and output the scores for each criterion in the following JSON format:

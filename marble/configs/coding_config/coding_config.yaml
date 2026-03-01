@@ -12,7 +12,7 @@ relationships:
   - [agent3, agent2, "collaborates with"]
   # - [agent3, agent4, "collaborates with"]
 
-llm: "bedrock/converse/deepseek.v3.2"
+llm: "bedrock/converse/qwen.qwen3-32b-v1:0"
 
 environment:
   type: Coding
@@ -24,15 +24,14 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a program called 'Team_Treasure_Hunt' that is a multiplayer action game where teams of players collaborate to navigate through a series of challenging environments, collect treasures, and solve puzzles to reach a final treasure chamber. Each team member has unique abilities that are essential for solving specific puzzles and overcoming obstacles. The game includes various environments such as forests, caves, and ancient ruins, each with its own set of challenges. The team that collects the most treasures and reaches the final chamber first wins the game.
+    Please write a business software application called TeamSyncPro that facilitates seamless collaboration and project management across various departments within an organization. TeamSyncPro is a comprehensive project management system that integrates task management, resource allocation, and communication tools to enhance team productivity and project outcomes.
     1. Implementation requirements:
-       - Implement a game engine that supports multiplayer functionalities, allowing up to four players per team.
-       - Design different environments with varying levels of difficulty, including puzzles that require collaboration and the use of unique character abilities.
-       - Create a set of unique character abilities, such as strength (for moving heavy objects), agility (for navigating tight spaces), intelligence (for solving complex puzzles), and stealth (for avoiding traps).
-       - Develop a scoring system that rewards teams based on the number of treasures collected and the time taken to reach the final chamber.
-       - Provide comprehensive test specifications, including input scenarios such as different player actions, expected outputs like the game state changes, and edge cases such as players leaving the game or failing to solve puzzles.
-       - Ensure the game is robust and can handle unexpected inputs or behaviors from players, such as simultaneous actions or incorrect puzzle solutions.
-       - Test the game with different team compositions and strategies to ensure balanced and fair gameplay.
+       - The frontend should provide a user-friendly interface with features for task assignment, status updates, and real-time communication. It should support role-based access control to ensure that users can only view and interact with the information relevant to their roles.
+       - The backend should handle the core functionalities such as task management, resource allocation, and performance tracking. It should support RESTful API endpoints for frontend interactions and should be capable of handling multiple concurrent users and large datasets.
+       - The database should be designed to efficiently store and retrieve project data, including tasks, user profiles, and communication logs. It should support transactions and have mechanisms for data backup and recovery.
+       - The system should support integration with third-party tools commonly used in business environments, such as calendar applications, email services, and CRM systems, to enhance its utility and flexibility.
+       - The application should have a robust reporting module that can generate various types of reports, such as project progress reports, resource utilization reports, and performance metrics, to help managers make informed decisions.
+       - The frontend and backend should communicate seamlessly through well-defined APIs, ensuring that data is synchronized in real-time and that the user experience is smooth and responsive.
 
 
     2. Project structure:

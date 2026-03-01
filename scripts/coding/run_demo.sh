@@ -5,7 +5,7 @@ WORKSPACE_DIR="marble/workspace"
 UPDATE_SCRIPT="scripts/coding/utils/update_coding_config.py"
 RUN_DEMO_SCRIPT="marble/run_demo.sh"
 
-model_name="bedrock/converse/deepseek.v3.2"
+model_name="bedrock/converse/qwen.qwen3-32b-v1:0"
 safe_model_name=$(echo ${model_name} | tr '/' '_')
 LOG_DIR="marble/logs/${safe_model_name}"
 
@@ -13,7 +13,7 @@ rm -rf marble/memory_store
 
 mkdir -p ${LOG_DIR}
 
-for id in {1..5}; do
+for id in {1..100}; do
     echo "Processing task with ID=$id..."
     rm -rf ${WORKSPACE_DIR}/*
     python ${UPDATE_SCRIPT} --benchmark_id ${id} --llm_model "${model_name}"
