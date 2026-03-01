@@ -9,7 +9,7 @@ model_name="bedrock/converse/qwen.qwen3-32b-v1:0"
 safe_model_name=$(echo ${model_name} | tr '/' '_')
 LOG_DIR="marble/logs/${safe_model_name}"
 
-rm -rf marble/memory_store
+# rm -rf marble/memory_store
 
 mkdir -p ${LOG_DIR}
 

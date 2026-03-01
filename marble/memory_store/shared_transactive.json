@@ -1,0 +1,79 @@
+{
+  "agent_profiles": {
+    "agent1": {
+      "specialization_areas": [
+        "Coding Environment"
+      ],
+      "collaboration_history": {
+        "agent2": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        },
+        "agent3": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        }
+      },
+      "total_tasks_completed": 11,
+      "success_count": 10
+    },
+    "agent2": {
+      "specialization_areas": [
+        "Coding Environment"
+      ],
+      "collaboration_history": {
+        "agent1": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        },
+        "agent3": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        }
+      },
+      "total_tasks_completed": 11,
+      "success_count": 10
+    },
+    "agent3": {
+      "specialization_areas": [
+        "Coding Environment"
+      ],
+      "collaboration_history": {
+        "agent1": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        },
+        "agent2": {
+          "interaction_count": 11,
+          "success_count": 10,
+          "success_rate": 0.9090909090909091
+        }
+      },
+      "total_tasks_completed": 11,
+      "success_count": 10
+    }
+  },
+  "team_patterns": {
+    "agent1_agent2_agent3": {
+      "team_composition": [
+        "agent1",
+        "agent2",
+        "agent3"
+      ],
+      "task_types_suited_for": [
+        "Coding Environment"
+      ],
+      "avg_performance": 0.9090909090909091,
+      "communication_overhead": 0.0,
+      "usage_count": 33,
+      "total_performance": 30.0,
+      "total_overhead": 0.0
+    }
+  },
+  "pattern_counter": 0
+}

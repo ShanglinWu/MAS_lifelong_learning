@@ -24,14 +24,13 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a business software application called TeamSyncPro that facilitates seamless collaboration and project management across various departments within an organization. TeamSyncPro is a comprehensive project management system that integrates task management, resource allocation, and communication tools to enhance team productivity and project outcomes.
+    Please write a software system called CulturalExchangeHub that facilitates collaborative cultural exchanges and learning experiences among users from different parts of the world. CulturalExchangeHub is a web-based platform that connects individuals through interactive sessions, including virtual tours, language practice, and cultural workshops, while also providing tools for users to share and learn from each other’s cultural backgrounds.
     1. Implementation requirements:
-       - The frontend should provide a user-friendly interface with features for task assignment, status updates, and real-time communication. It should support role-based access control to ensure that users can only view and interact with the information relevant to their roles.
-       - The backend should handle the core functionalities such as task management, resource allocation, and performance tracking. It should support RESTful API endpoints for frontend interactions and should be capable of handling multiple concurrent users and large datasets.
-       - The database should be designed to efficiently store and retrieve project data, including tasks, user profiles, and communication logs. It should support transactions and have mechanisms for data backup and recovery.
-       - The system should support integration with third-party tools commonly used in business environments, such as calendar applications, email services, and CRM systems, to enhance its utility and flexibility.
-       - The application should have a robust reporting module that can generate various types of reports, such as project progress reports, resource utilization reports, and performance metrics, to help managers make informed decisions.
-       - The frontend and backend should communicate seamlessly through well-defined APIs, ensuring that data is synchronized in real-time and that the user experience is smooth and responsive.
+       - Develop a user registration and profile management system to allow users to create accounts, upload profile pictures, and fill in cultural backgrounds and interests. This system must be completed before any other features can be integrated.
+       - Create a virtual tour module that allows users to explore 3D models of cultural landmarks and historical sites. This module should include interactive elements such as clickable hotspots for additional information and audio guides. The virtual tour module must be built after the user registration system is in place.
+       - Implement a language learning and practice feature that pairs users for real-time language exchanges. This feature should include a translation tool to assist in communication. The language learning module can only be developed after the virtual tour module is functional.
+       - Design a cultural workshop module that hosts live and pre-recorded sessions led by cultural experts. Users should be able to join these sessions, ask questions, and participate in discussions. This module should be developed after the language learning feature is completed.
+       - Integrate a user feedback and rating system to allow users to rate and review their experiences with the platform, including the quality of virtual tours, language exchanges, and workshops. This system should be implemented as the final step, after all other modules are in place.
 
 
     2. Project structure:
@@ -91,8 +90,8 @@ agents:
       I can let agent 2 to add the missing functionality after I have fixed the existing issues and optimized the code.
 
 memory:
-  type: SharedMemory
-  topology: local    # or "shared" or "hybrid"
+  type: LLMAMem
+  topology: shared    # or "shared" or "hybrid"
   persist_dir: memory_store
   consolidation_interval: 3
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
@@ -108,4 +107,4 @@ engine_planner:
 
 output:
   format: jsonl
-  file_path: "result/sharedmem/development_output_deepseek.jsonl"
+  file_path: "result/llmamem/development_output_qwen32b.jsonl"

@@ -34,11 +34,10 @@ class ProceduralMemory:
     Retrieval uses multi-factor scoring:
         score(m, q) = λ_r * recency(m) + λ_v * relevance(m, q) + λ_i * importance(m)
     where for procedural memory, m is title + knowledge_content.
-        importance(p_j) = ρ_j * log(1 + viewed_times_j) / log(1 + MAX_VIEWS)
+        importance(p_j) = ρ_j  (success rate)
     """
 
     EMBEDDING_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
-    MAX_VIEWS: int = 100  # Normalization constant for importance scoring
     EPSILON: float = 1e-6  # Small constant to prevent division by zero
 
     def __init__(self, agent_id: str, persist_dir: str = "memory_store") -> None:
@@ -171,10 +170,10 @@ class ProceduralMemory:
         score(m, q) = λ_r * recency(m) + λ_v * relevance(m, q) + λ_i * importance(m)
 
         Where:
-            λ_r = 0.2 λ_v = 0.5, λ_i = 0.3
+            λ_r = 0.2 λ_v = 0.4, λ_i = 0.4
             recency(m) = exp(t_m - t_current)
             relevance(m, q) = cosine_similarity(embed(title+content), embed(query))
-            importance(p_j) = ρ_j * log(1 + viewed_times_j) / log(1 + MAX_VIEWS)
+            importance(p_j) = ρ_j  (success rate)
 
         Args:
             query: The query string (current task description).
@@ -205,15 +204,11 @@ class ProceduralMemory:
                 sklearn_cosine_similarity(proc_emb, query_emb_array)[0][0]
             )
 
-            # importance(p_j) = ρ_j * log(1 + viewed_times_j) / log(1 + MAX_VIEWS)
-            success_rate = proc["success_rate"]
-            viewed_times = proc["viewed_times"]
-            importance = success_rate * math.log(1 + viewed_times) / math.log(
-                1 + self.MAX_VIEWS
-            )
+            # importance(p_j) = ρ_j (purely success rate)
+            importance = proc["success_rate"]
 
             # Multi-factor scoring with paper weights
-            score = 0.2 * recency + 0.5 * relevance + 0.3 * importance
+            score = 0.2 * recency + 0.4 * relevance + 0.4 * importance
             scored_procedures.append((score, proc))
 
         scored_procedures.sort(key=lambda x: x[0], reverse=True)

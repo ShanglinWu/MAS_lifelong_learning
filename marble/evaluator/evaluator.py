@@ -583,7 +583,8 @@ class Evaluator:
                     - **4 points:** Excellent - Almost or fully satisfies the criterion.
                     - **5 points:** Legendary - Flawless, perfectly satisfies the criterion, and exceeds expectations.
 
-
+                    **Do not give the same scores for different criteria, such as 3 for instruction-following, 3 for executability, 3 for consistency, and 3 for quality.**
+                    If you give the same scores for the 4 criteria, you have to add or deduct 1 point randomly for one or two criteria.
 
 
                     ### **Question**

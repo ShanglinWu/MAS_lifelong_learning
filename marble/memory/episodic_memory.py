@@ -149,7 +149,7 @@ class EpisodicMemory:
         score(m, q) = λ_r * recency(m) + λ_v * relevance(m, q) + λ_i * importance(m)
 
         Where:
-            λ_r = 0.15, λ_v = 0.55, λ_i = 0.2
+            λ_r = 0.2, λ_v = 0.4, λ_i = 0.4
             recency(m) = exp(t_m - t_current)
             relevance(m, q) = cosine_similarity(embed(m), embed(q))
             importance(e) based on outcome success
@@ -185,7 +185,7 @@ class EpisodicMemory:
             importance = 1.0 if episode["outcome"].get("success", False) else 0.3
 
             # Multi-factor scoring with paper weights
-            score = 0.2 * recency + 0.5 * relevance + 0.3 * importance
+            score = 0.2 * recency + 0.4 * relevance + 0.4 * importance
             scored_episodes.append((score, episode))
 
         # Sort by score descending and take top-k
