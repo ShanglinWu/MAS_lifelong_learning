@@ -503,8 +503,14 @@ class Engine:
                 ]
                 self.logger.info("Engine graph-based coordination loop completed.")
             elif isinstance(self.environment, CodingEnvironment):
-                iteration_data_summary = iteration_data.get("summary", "")
-                self.evaluator.evaluate_code_quality(self.task, iteration_data_summary)
+                solution_path = os.path.join(
+                    getattr(self.environment, "workspace_dir", "workspace"),
+                    "solution.py",
+                )
+                code = self._read_code_from_file(solution_path)
+                if not code:
+                    code = iteration_data.get("summary", "")
+                self.evaluator.evaluate_code_quality(self.task, code)
                 summary_data["task_evaluation"] = self.evaluator.metrics["code_quality"]
                 self.logger.info("Engine graph-based coordination loop completed.")
             self.logger.info("Engine graph-based coordination loop completed.")
@@ -668,15 +674,15 @@ class Engine:
             summary_data["total_milestones"] = self.evaluator.metrics[
                 "total_milestones"
             ]
-            if self.environment.name == "Research Environment":
+            if isinstance(self.environment, ResearchEnvironment):
                 self.evaluator.evaluate_task_research(
                     self.task, iteration_data["summary"]
                 )
                 summary_data["task_evaluation"] = self.evaluator.metrics[
                     "task_evaluation"
                 ]
-                self.logger.info("Engine graph-based coordination loop completed.")
-            if self.environment.name == "Coding Environment":
+                self.logger.info("Engine star-based coordination loop completed.")
+            elif isinstance(self.environment, CodingEnvironment):
                 solution_path = os.path.join(
                     getattr(self.environment, "workspace_dir", "workspace"),
                     "solution.py",
@@ -686,12 +692,16 @@ class Engine:
                     self.evaluator.evaluate_code_quality(
                         task=self.task, code_result=code
                     )
-                    summary_data["code_quality"] = self.evaluator.metrics[
-                        "code_quality"
-                    ]
-                    self.logger.info(
-                        f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                else:
+                    self.evaluator.evaluate_code_quality(
+                        task=self.task, code_result=iteration_data.get("summary", "")
                     )
+                summary_data["task_evaluation"] = self.evaluator.metrics[
+                    "code_quality"
+                ]
+                self.logger.info(
+                    f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                )
                 self.logger.info("Engine star-based coordination loop completed.")
             elif self.environment.name == "World Simulation Environment":
                 self.evaluator.evaluate_task_world(self.task, iteration_data["summary"])
@@ -846,11 +856,18 @@ class Engine:
             summary_data["total_milestones"] = self.evaluator.metrics[
                 "total_milestones"
             ]
-            if self.environment.name == "Research Environment":
+            if isinstance(self.environment, ResearchEnvironment):
                 self.evaluator.evaluate_task_research(
                     self.task, iteration_data["summary"]
                 )
-                # summary_data['task_evaluation'] = self.evaluator.metrics["task_evaluation"]
+                summary_data["task_evaluation"] = self.evaluator.metrics[
+                    "task_evaluation"
+                ]
+                self.logger.info("Engine chain-based coordination loop completed.")
+            elif isinstance(self.environment, CodingEnvironment):
+                iteration_data_summary = iteration_data.get("summary", "")
+                self.evaluator.evaluate_code_quality(self.task, iteration_data_summary)
+                summary_data["task_evaluation"] = self.evaluator.metrics["code_quality"]
                 self.logger.info("Engine chain-based coordination loop completed.")
             elif self.environment.name == "World Simulation Environment":
                 self.evaluator.evaluate_task_world(self.task, iteration_data["summary"])
@@ -968,15 +985,15 @@ class Engine:
             summary_data["total_milestones"] = self.evaluator.metrics[
                 "total_milestones"
             ]
-            if self.environment.name == "Research Environment":
+            if isinstance(self.environment, ResearchEnvironment):
                 self.evaluator.evaluate_task_research(
                     self.task, iteration_data["summary"]
                 )
                 summary_data["task_evaluation"] = self.evaluator.metrics[
                     "task_evaluation"
                 ]
-                self.logger.info("Engine graph-based coordination loop completed.")
-            if self.environment.name == "Coding Environment":
+                self.logger.info("Engine tree-based coordination loop completed.")
+            elif isinstance(self.environment, CodingEnvironment):
                 solution_path = os.path.join(
                     getattr(self.environment, "workspace_dir", "workspace"),
                     "solution.py",
@@ -986,12 +1003,16 @@ class Engine:
                     self.evaluator.evaluate_code_quality(
                         task=self.task, code_result=code
                     )
-                    summary_data["code_quality"] = self.evaluator.metrics[
-                        "code_quality"
-                    ]
-                    self.logger.info(
-                        f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                else:
+                    self.evaluator.evaluate_code_quality(
+                        task=self.task, code_result=iteration_data.get("summary", "")
                     )
+                summary_data["task_evaluation"] = self.evaluator.metrics[
+                    "code_quality"
+                ]
+                self.logger.info(
+                    f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                )
                 self.logger.info("Engine tree-based coordination loop completed.")
             elif self.environment.name == "World Simulation Environment":
                 self.evaluator.evaluate_task_world(self.task, iteration_data["summary"])
