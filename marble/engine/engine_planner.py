@@ -78,7 +78,7 @@ class EnginePlanner:
         memory: Any,
         config: Dict[str, Any],
         task: str,
-        model: str = "gpt-3.5-turbo",
+        model: str = "",
     ):
         """
         Initialize the EnginePlanner.
@@ -88,7 +88,7 @@ class EnginePlanner:
             memory (Any): Shared memory instance (an instance of SharedMemory).
             config (Dict[str, Any]): Configuration parameters.
             task (str): The overall task description.
-            model (str, optional): The LLM model to use. Defaults to "gpt-3.5-turbo".
+            model (str, optional): The LLM model to use. Defaults to config.llm.
         """
         self.agent_graph = agent_graph
         self.memory = memory  # Expected to be an instance of SharedMemory.
@@ -118,6 +118,15 @@ class EnginePlanner:
             prompt += f"- Agent ID: {agent_id}\n"
             prompt += f"  Relationships: {profile['relationships']}\n"
             prompt += f"  Profile: {profile['profile']}\n"
+
+        # Include transactive memory for better task allocation (if available)
+        if hasattr(self.memory, 'get_transactive_str'):
+            transactive_info = self.memory.get_transactive_str()
+            if transactive_info:
+                prompt += (
+                    f"\nTeam Memory (Historical Performance & Capabilities):\n"
+                    f"{transactive_info}\n"
+                )
 
         # (The final JSON output instructions will be appended in each planning method.)
         return prompt
@@ -428,7 +437,7 @@ class EnginePlanner:
             ],
             return_num=1,
             max_token_num=2048,
-            temperature=0.0,
+            temperature=0.7,
             top_p=None,
             stream=None,
         )[0]
@@ -454,9 +463,6 @@ class EnginePlanner:
         Returns:
             bool: True to continue, False to terminate.
         """
-        if not agents_results:
-            return True
-
         prompt = (
             "Based on the following agents' results, determine whether the overall task is completed.\n\n"
             f"Task Description:\n{self.task}\n\n"
@@ -466,22 +472,28 @@ class EnginePlanner:
             prompt += f"- {result}\n"[:500]
 
         prompt += (
-            "\nYou MUST respond with ONLY a JSON object and nothing else — no markdown, no explanation, no code fences.\n"
-            "The JSON must contain exactly one key: 'continue', set to true or false.\n"
-            "A 'success' key in the results only means the tool ran — it does NOT mean the task is complete.\n"
-            "If results contain errors or the task is unfinished, set 'continue' to true.\n"
-            "Your entire response must be exactly this format:\n"
-            '{"continue": true}'
+            "\nRespond with a JSON object containing a single key 'continue' set to true or false.\n"
+            "Sometimes the results may include a key 'success' with a value of true, but that only indicates the tool executed successfully, "
+            "not that the task is complete.\n"
+            "If there meets an error of the results and unfinished, please respond with a JSON object containing a single key 'continue' set to True.\n"
+            "Analyze the results and decide whether the task should continue or be terminated.\n"
+            "Example:\n"
+            "{\n"
+            '  "continue": true\n'
+            "}"
         )
 
-        messages = [{"role": "system", "content": prompt}]
+        messages = [
+            {"role": "system", "content": "You are a task continuation decision maker."},
+            {"role": "user", "content": prompt},
+        ]
         response = model_prompting(
             llm_model=self.model,
             messages=messages,
             return_num=1,
             max_token_num=256,
-            temperature=0.3,
-            top_p=1.0,
+            temperature=0.7,
+            top_p=None,
         )
         messages_for_token = messages + [
             {"role": "assistant", "content": response[0].content}
@@ -491,7 +503,7 @@ class EnginePlanner:
             # decision = json.loads(response[0].content if response[0].content else "")
             decision = json_parse(response[0].content)
             self.logger.debug(f"Received continuation decision: {decision}")
-            return decision.get("continue", True)
-        except (json.JSONDecodeError, ValueError) as e:
+            return decision.get("continue", False)
+        except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse JSON decision response: {e}")
-            return True
+            return False

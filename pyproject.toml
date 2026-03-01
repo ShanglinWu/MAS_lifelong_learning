@@ -32,7 +32,6 @@ requests = "^2.32.3"
 psycopg2-binary = "^2.9.10"
 pymysql = "^1.1.1"
 colorlog = "^6.9.0"
-boto3 = "^1.34.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -16,12 +16,15 @@ class LongTermMemory(BaseMemory):
     Long term momery class that implements memory retrieval.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, llm_model: str = "") -> None:
         """
         Initialize the memory module.
         """
         super().__init__()
         self.storage: List[tuple[Any, Any]] = []
+        self.llm_model = llm_model
+
+    EMBEDDING_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
 
     def update(self, key: str, information: Dict[str, Any]) -> None:
         """
@@ -32,7 +35,7 @@ class LongTermMemory(BaseMemory):
             information (Dict[str, Union[str, Message]]): Information to store.
         """
         embedding = text_embedding(
-            model="text-embedding-3-small",
+            model=self.EMBEDDING_MODEL,
             input=str(information),
         )
         embedding_array: NDArray[Any] = np.array(embedding)
@@ -67,7 +70,7 @@ class LongTermMemory(BaseMemory):
         if not self.storage:
             return None
         embedding = text_embedding(
-            model="text-embedding-3-small",
+            model=self.EMBEDDING_MODEL,
             input=str(information),
         )
         embedding_array: NDArray[Any] = np.array(embedding)
@@ -109,8 +112,11 @@ class LongTermMemory(BaseMemory):
             prompt += f"{idx}. {str(information)}\n"
 
         summary = model_prompting(
-            llm_model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}],
+            llm_model=self.llm_model or "gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes memory content."},
+                {"role": "user", "content": prompt},
+            ],
             return_num=1,
             max_token_num=512,
             temperature=0.0,

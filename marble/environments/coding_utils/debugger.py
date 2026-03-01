@@ -104,7 +104,7 @@ def run_and_debug_solution_handler(
                 ],
                 return_num=1,
                 max_token_num=2048,
-                temperature=0.0,
+                temperature=0.7,
             )[0]
 
             suggestions = suggestions_response.content
@@ -126,7 +126,7 @@ def run_and_debug_solution_handler(
                 ],
                 return_num=1,
                 max_token_num=2048,
-                temperature=0.0,
+                temperature=0.7,
             )[0]
 
             fixed_code = fix_response.content

@@ -3,22 +3,16 @@ Evaluator module for tracking metrics and evaluating agent performance.
 """
 
 import json
+import os
 import re
 from typing import Any, Dict, List
+
+from ruamel.yaml import YAML
 
 from marble.agent import BaseAgent
 from marble.environments import BaseEnvironment
 from marble.llms.model_prompting import model_prompting
 from marble.utils.logger import get_logger
-
-
-def _safe_format(template: str, **kwargs: str) -> str:
-    """Replace {key} placeholders using str.replace() to avoid KeyError on
-    literal JSON braces (e.g. {"rating": X}) inside prompt templates."""
-    result = template
-    for key, value in kwargs.items():
-        result = result.replace("{" + key + "}", value)
-    return result
 
 
 class Evaluator:
@@ -37,8 +31,6 @@ class Evaluator:
         self.metrics:Dict[str, Any] = {
             "task_completion": [],
             "token_consumption": [],
-            "input_token_consumption": [],
-            "output_token_consumption": [],
             "planning_score": [],
             "communication_score": [],
             "task_evaluation": {},
@@ -50,7 +42,7 @@ class Evaluator:
             self.evaluation_prompts = json.load(f)
 
         evaluate_llm_config = self.metrics_config.get('evaluate_llm', {})
-        self.llm = evaluate_llm_config.get('model', 'gpt-3.5-turbo') if isinstance(evaluate_llm_config, dict) else evaluate_llm_config
+        self.llm = evaluate_llm_config.get('model', '') if isinstance(evaluate_llm_config, dict) else evaluate_llm_config
 
 
 
@@ -70,15 +62,28 @@ class Evaluator:
 
         # For token consumption, sum up the tokens used by agents in this iteration
         total_tokens = sum(agent.get_token_usage() for agent in agents)
-        total_input_tokens = sum(
-            getattr(agent, "get_input_token_usage", lambda: 0)() for agent in agents
-        )
-        total_output_tokens = sum(
-            getattr(agent, "get_output_token_usage", lambda: 0)() for agent in agents
-        )
         self.metrics["token_consumption"].append(total_tokens)
-        self.metrics["input_token_consumption"].append(total_input_tokens)
-        self.metrics["output_token_consumption"].append(total_output_tokens)
+
+    def _safe_format(self, template: str, **kwargs: Any) -> str:
+        """
+        Substitute named placeholders in a prompt template without using str.format().
+
+        str.format() fails when the template contains JSON examples with curly braces
+        (e.g. {"rating": 5}) because Python interprets them as format specifiers.
+        This method simply does a plain str.replace() for each known placeholder,
+        leaving any other curly-brace content untouched.
+
+        Args:
+            template (str): The prompt template string.
+            **kwargs: Placeholder names and their replacement values.
+
+        Returns:
+            str: The template with all provided placeholders substituted.
+        """
+        result = template
+        for key, value in kwargs.items():
+            result = result.replace("{" + key + "}", str(value))
+        return result
 
     def evaluate_communication(self, task: str, communications: str) -> None:
         """
@@ -91,7 +96,7 @@ class Evaluator:
         # Get the communication prompt
         communication_prompt_template = self.evaluation_prompts["Graph"]["Communication"]["prompt"]
         # Fill in the placeholders {task} and {communications}
-        prompt = _safe_format(communication_prompt_template, task=task, communications=communications)
+        prompt = self._safe_format(communication_prompt_template, task=task, communications=communications)
         # Call the language model
         result = model_prompting(
             llm_model=self.llm,
@@ -121,7 +126,7 @@ class Evaluator:
         # Get the planning prompt
         planning_prompt_template = self.evaluation_prompts["Graph"]["Planning"]["prompt"]
         # Fill in the placeholders
-        prompt = _safe_format(
+        prompt = self._safe_format(
             planning_prompt_template,
             summary=summary,
             agent_profiles=agent_profiles,
@@ -159,7 +164,7 @@ class Evaluator:
             agent_results = agent_results[:MAX_LENGTH] + "..."
         kpi_prompt_template = self.evaluation_prompts["Graph"]["KPI"]["prompt"]
         # Fill in the placeholders {task} and {agent_results}
-        prompt = _safe_format(kpi_prompt_template, task=task, agent_results=agent_results)
+        prompt = self._safe_format(kpi_prompt_template, task=task, agent_results=agent_results)
         # Call the language model
         result = model_prompting(
             llm_model=self.llm,
@@ -195,7 +200,7 @@ class Evaluator:
         # Get the research evaluation prompt
         research_prompt_template = self.evaluation_prompts["research"]["task_evaluation"]["prompt"]
         # Fill in the placeholders {task} and {result}
-        prompt = _safe_format(research_prompt_template, task=task, result=result)
+        prompt = self._safe_format(research_prompt_template, task=task, result=result)
         # Call the language model
         llm_response = model_prompting(
             llm_model=self.llm,
@@ -226,7 +231,7 @@ class Evaluator:
         # change the prompt to evaluate buyer and seller
         # world_prompt_template = self.evaluation_prompts["world"]["task_evaluation"]["buyer_prompt"]
         world_prompt_template = self.evaluation_prompts["world"]["task_evaluation"]["seller_prompt"]
-        prompt = _safe_format(world_prompt_template, task=task, result=result)
+        prompt = self._safe_format(world_prompt_template, task=task, result=result)
 
         llm_response = model_prompting(
             llm_model=self.llm,
@@ -338,12 +343,13 @@ class Evaluator:
                 # Ensure ratings are integers
                 ratings_dict: Dict[str, int] = {k: int(v) for k, v in ratings.items()}
                 return ratings_dict
-
-            self.logger.error("No JSON found in assistant's answer.")
-            return {}
-        except (json.JSONDecodeError, ValueError, TypeError):
+            else:
+                self.logger.error("No JSON found in assistant's answer.")
+                return {}
+        except json.JSONDecodeError:
             self.logger.error("Failed to parse JSON from assistant's answer.")
             return {}
+        
 
     def parse_score(self, assistant_answer: str) -> int:
         """
@@ -414,14 +420,10 @@ class Evaluator:
         success_rate = tasks_completed / total_tasks if total_tasks > 0 else 0
 
         total_tokens = sum(self.metrics["token_consumption"])
-        total_input_tokens = sum(self.metrics["input_token_consumption"])
-        total_output_tokens = sum(self.metrics["output_token_consumption"])
         avg_tokens_per_iteration = total_tokens / total_tasks if total_tasks > 0 else 0
 
         self.logger.info(f"Task Completion Success Rate: {success_rate * 100:.2f}%")
         self.logger.info(f"Total Token Consumption: {total_tokens}")
-        self.logger.info(f"Total Input Token Consumption: {total_input_tokens}")
-        self.logger.info(f"Total Output Token Consumption: {total_output_tokens}")
         self.logger.info(f"Average Tokens per Iteration: {avg_tokens_per_iteration}")
 
         # Additional metrics can be computed and logged here
@@ -436,8 +438,6 @@ class Evaluator:
         return {
             "success_rate": sum(self.metrics["task_completion"]) / len(self.metrics["task_completion"]) if self.metrics["task_completion"] else 0,
             "total_tokens": sum(self.metrics["token_consumption"]),
-            "total_input_tokens": sum(self.metrics["input_token_consumption"]),
-            "total_output_tokens": sum(self.metrics["output_token_consumption"]),
             "avg_tokens_per_iteration": sum(self.metrics["token_consumption"]) / len(self.metrics["token_consumption"]) if self.metrics["token_consumption"] else 0
         }
 
@@ -534,23 +534,39 @@ class Evaluator:
         Evaluate the code quality based on stricter criteria.
         """
         try:
-            full_task_description = task or ""
+            config_path = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "../configs/coding_config/coding_config.yaml",
+                )
+            )
+            if not os.path.exists(config_path):
+                self.logger.error("Config file not found")
+                return
+
+            yaml = YAML()
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.load(f)
+
+            full_task_description = config['task']['content']
 
             requirements_start = "1. Implementation requirements:\n"
             requirements_end = "\n\n2. Project structure:"
-            start_idx = full_task_description.find(requirements_start)
-            end_idx = full_task_description.find(requirements_end)
-            requirements = ""
-            if (
-                start_idx != -1
-                and end_idx != -1
-                and end_idx > start_idx + len(requirements_start)
-            ):
-                requirements = full_task_description[
-                    start_idx + len(requirements_start): end_idx
-                ].strip()
+            requirements = full_task_description[
+                full_task_description.find(requirements_start) + len(requirements_start):
+                full_task_description.find(requirements_end)
+            ].strip()
 
-            solution_content = code_result or ""
+            solution_path = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)),
+                    "../workspace/solution.py",
+                )
+            )
+            solution_content = ""
+            if os.path.exists(solution_path):
+                with open(solution_path, 'r', encoding='utf-8') as f:
+                    solution_content = f.read()
 
             code_quality_prompt_template = """
                     [Context]
@@ -593,7 +609,7 @@ class Evaluator:
             """
 
             # Fill in the template
-            prompt = _safe_format(
+            prompt = self._safe_format(
                 code_quality_prompt_template,
                 task_description=full_task_description,
                 requirements=requirements,
@@ -634,3 +650,119 @@ class Evaluator:
                 "consistency": 1,
                 "quality": 1
             }
+
+    def compute_task_outcome(self, env_name: str) -> Dict[str, Any]:
+        """
+        Compute a unified TaskOutcome from environment-specific evaluation scores.
+
+        Normalises every environment's metrics to a 0-1 task_score and derives a
+        boolean task_success flag using:
+            * 1-5 scale  →  success when mean score >= 2.0  (i.e. task_score >= 0.25)
+            * 0-1 scale  →  success when score >= 0.4
+
+        Args:
+            env_name: The environment name / type string.
+
+        Returns:
+            Dict with keys: task_score (0-1), task_success (bool),
+            dimension_scores (env-specific dict), error_info (str|None).
+        """
+        task_eval = self.metrics.get("task_evaluation", {})
+        dimension_scores: Dict[str, Any] = {}
+        task_score: float = 0.0
+        task_success: bool = False
+
+        if env_name == "Coding Environment":
+            # code_quality scores are on a 1-5 scale
+            cq = self.metrics.get("code_quality", {})
+            if cq:
+                dimension_scores = dict(cq)
+                raw_mean = sum(cq.values()) / len(cq)  # 1-5
+                task_score = (raw_mean - 1.0) / 4.0     # normalise to 0-1
+                task_success = raw_mean >= 2.0
+            else:
+                task_score = 0.0
+                task_success = False
+
+        elif env_name == "Research Environment":
+            # research ratings are on a 1-5 scale
+            if isinstance(task_eval, dict) and task_eval:
+                dimension_scores = dict(task_eval)
+                vals = [v for v in task_eval.values() if isinstance(v, (int, float))]
+                if vals:
+                    raw_mean = sum(vals) / len(vals)
+                    task_score = (raw_mean - 1.0) / 4.0
+                    task_success = raw_mean >= 2.0
+                else:
+                    task_score = 0.0
+                    task_success = False
+            else:
+                task_score = 0.0
+                task_success = False
+
+        elif env_name == "Minecraft Environment":
+            # task_evaluation is block_hit_rate * 5 (0-5 scale), original rate is 0-1
+            if isinstance(task_eval, (int, float)):
+                block_hit_rate = task_eval / 5.0  # back to 0-1
+                dimension_scores = {"block_hit_rate": block_hit_rate}
+                task_score = block_hit_rate
+                task_success = block_hit_rate >= 0.4
+            else:
+                task_score = 0.0
+                task_success = False
+
+        elif env_name == "DB Environment":
+            # DB stores {root_cause: [...], predicted: str} — no numeric score yet
+            # Use simple match check: success if predicted text mentions any label
+            if isinstance(task_eval, dict):
+                dimension_scores = dict(task_eval)
+                root_causes = task_eval.get("root_cause", [])
+                predicted = str(task_eval.get("predicted", "")).lower()
+                if root_causes and predicted:
+                    matches = sum(
+                        1 for rc in root_causes if rc.lower() in predicted
+                    )
+                    task_score = matches / len(root_causes) if root_causes else 0.0
+                    task_success = task_score >= 0.4
+                else:
+                    task_score = 0.0
+                    task_success = False
+            else:
+                task_score = 0.0
+                task_success = False
+
+        elif env_name == "World Simulation Environment":
+            # world ratings are per-role on a 1-5 scale
+            if isinstance(task_eval, dict):
+                dimension_scores = dict(task_eval)
+                all_vals = []
+                for role_scores in task_eval.values():
+                    if isinstance(role_scores, dict):
+                        all_vals.extend(
+                            v for v in role_scores.values()
+                            if isinstance(v, (int, float))
+                        )
+                if all_vals:
+                    raw_mean = sum(all_vals) / len(all_vals)
+                    task_score = (raw_mean - 1.0) / 4.0
+                    task_success = raw_mean >= 2.0
+                else:
+                    task_score = 0.0
+                    task_success = False
+            else:
+                task_score = 0.0
+                task_success = False
+
+        else:
+            # Unknown environment — default to failure
+            task_score = 0.0
+            task_success = False
+
+        return {
+            "success": task_success,
+            "metrics": {
+                "task_score": round(task_score, 4),
+                "dimension_scores": dimension_scores,
+            },
+            "error_info": None,
+        }

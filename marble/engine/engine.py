@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 from marble.agent import BaseAgent
 from marble.configs.config import Config
 from marble.engine.engine_planner import EnginePlanner
+from marble.llms.model_prompting import get_token_usage
 from marble.environments import (
     BaseEnvironment,
     CodingEnvironment,
@@ -22,7 +23,8 @@ from marble.environments import (
 from marble.evaluator.evaluator import Evaluator
 from marble.graph.agent_graph import AgentGraph
 from marble.memory.base_memory import BaseMemory
-from marble.memory.llma_mem import LLMAMemManager, MemoryTopology, MemoryTopologyManager
+from marble.memory.llma_mem import LLMAMem
+from marble.memory.null_memory import NullMemory
 from marble.memory.shared_memory import SharedMemory
 from marble.utils.logger import get_logger
 
@@ -60,35 +62,6 @@ class Engine:
             self.logger.error(f"Failed to read code from {file_path}: {e}")
             return ""
 
-    def _get_solution_file_path(self) -> str:
-        """Return the active coding workspace solution path."""
-        workspace_dir = self.environment.config.get("workspace_dir", "workspace")
-        return os.path.join(workspace_dir, "solution.py")
-
-    def _attach_coding_evaluation(self, summary_data: Dict[str, Any]) -> None:
-        """Evaluate coding output and attach `code_quality` to summary data."""
-        if not isinstance(self.environment, CodingEnvironment):
-            return
-
-        code = self._read_code_from_file(self._get_solution_file_path())
-        if not code:
-            # Fallback: evaluate based on final summary text when solution file
-            # is not persisted by the current run path.
-            iterations = summary_data.get("iterations", [])
-            if isinstance(iterations, list) and iterations:
-                last_iter = iterations[-1]
-                if isinstance(last_iter, dict):
-                    code = str(last_iter.get("summary", "") or "")
-            if not code:
-                self.logger.warning("No solution.py or summary found for coding evaluation.")
-                return
-
-        self.evaluator.evaluate_code_quality(task=self.task, code_result=code)
-        summary_data["code_quality"] = self.evaluator.metrics["code_quality"]
-        self.logger.info(
-            f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
-        )
-
     def __init__(self, config: Config):
         """
         Initialize the Engine with the given configuration.
@@ -109,8 +82,6 @@ class Engine:
             agent.set_agent_graph(self.graph)
         # Initialize Memory
         self.memory = self._initialize_memory(config.memory)
-        # Initialize LLMA-Mem if configured
-        self._initialize_llma_mem(config.memory)
         # Initialize Evaluator
         self.evaluator = Evaluator(metrics_config=config.metrics)
         self.task = config.task.get("content", "")
@@ -157,7 +128,7 @@ class Engine:
             env3 = ResearchEnvironment(name="Research Environment", config=env_config)
             return env3
         elif env_type == "Coding":
-            env4 = CodingEnvironment(name="Coding Environment", config=env_config)
+            env4 = CodingEnvironment(name="Coding Environment", config={**env_config, "llm": self.config.llm})
             return env4
         elif env_type == "WorldSimulation":
             env4 = WorldSimulationEnvironment(
@@ -187,13 +158,15 @@ class Engine:
         """
         agents = []
         llm = self.config.llm
+        memory_type = self.config.memory.get("type", "SharedMemory")
         for agent_config in agent_configs:
             agent_llm = agent_config.get(
                 "llm", llm
             )  # use agent-specific LLM if provided
             agent_type = agent_config.get("type")
             agent = BaseAgent(
-                config=agent_config, env=self.environment, model=agent_llm
+                config=agent_config, env=self.environment, model=agent_llm,
+                memory_type=memory_type,
             )
             agents.append(agent)
             self.logger.debug(
@@ -222,43 +195,32 @@ class Engine:
             BaseMemory: An instance of the memory module.
         """
         memory_type = memory_config.get("type", "SharedMemory")
-        memory: Union[BaseMemory, SharedMemory, None] = None
-        if memory_type == "SharedMemory":
+        memory: Union[BaseMemory, SharedMemory, NullMemory, LLMAMem, None] = None
+        if memory_type == "LLMAMem":
+            topology = memory_config.get("topology", "local")
+            persist_dir = memory_config.get("persist_dir", "memory_store")
+            consolidation_interval = memory_config.get("consolidation_interval", 3)
+            agent_ids = [agent.agent_id for agent in self.agents]
+            llma_memories = LLMAMem.create_for_topology(
+                topology=topology,
+                agent_ids=agent_ids,
+                llm_model=self.config.llm,
+                persist_dir=persist_dir,
+                consolidation_interval=consolidation_interval,
+            )
+            # Assign LLMAMem instances to each agent
+            for agent in self.agents:
+                agent.memory = llma_memories[agent.agent_id]
+            # Return first instance for planner (gives access to transactive memory)
+            memory = list(llma_memories.values())[0]
+        elif memory_type == "SharedMemory":
             memory = SharedMemory()
+        elif memory_type == "NoMemory":
+            memory = NullMemory()
         else:
             memory = BaseMemory()
         self.logger.debug(f"Memory of type '{memory_type}' initialized.")
         return memory
-
-    def _initialize_llma_mem(self, memory_config: Dict[str, Any]) -> None:
-        """
-        Initialize LLMA-Mem for all agents if configured.
-
-        Reads llma_mem config from memory_config and creates a
-        MemoryTopologyManager + LLMAMemManager per agent.
-        """
-        llma_config = memory_config.get("llma_mem", {})
-        if not llma_config.get("enabled", False):
-            return
-
-        topology_str = llma_config.get("topology", "hybrid")
-        topology = MemoryTopology(topology_str)
-        topo_manager = MemoryTopologyManager(topology)
-
-        for agent in self.agents:
-                agent.llma_mem = LLMAMemManager(
-                agent_id=agent.agent_id,
-                topology_manager=topo_manager,
-                consolidation_interval=llma_config.get("consolidation_interval", 2),
-                enable_auto_embedding=llma_config.get("auto_embedding", True),
-                embedding_model=llma_config.get(
-                    "embedding_model", "amazon.titan-embed-text-v2:0"
-                ),
-            )
-
-        self.logger.info(
-            f"LLMA-Mem initialized with '{topology_str}' topology for {len(self.agents)} agents."
-        )
 
     def graph_coordinate(self) -> None:
         """
@@ -361,10 +323,21 @@ class Engine:
                 self.evaluator.evaluate_communication(self.task, communications_str)
             else:
                 self.logger.info("No communications to evaluate")
+                # Store -1 if communications are empty
                 self.evaluator.metrics["communication_score"].append(-1)
 
             # Evaluate planning
-            self.evaluator.metrics["planning_score"].append(-1)
+            agent_profiles = self._get_agent_profiles()
+            iteration_data_task_assignments = iteration_data.get("task_assignments")
+            assert isinstance(iteration_data_task_assignments, dict)
+            agent_tasks_str = self._format_agent_tasks(iteration_data_task_assignments)
+            iteration_data_task_results = iteration_data.get("task_results")
+            assert isinstance(iteration_data_task_results, list)
+            results_str = self._format_results(iteration_data_task_results)
+            iteration_data_summary = iteration_data.get("summary")
+            assert isinstance(iteration_data_summary, str)
+            self.evaluator.evaluate_planning(iteration_data_summary, agent_profiles, agent_tasks_str, results_str)
+            self.evaluator.evaluate_kpi(self.task, results_str)
 
             end_on_iter_0 = False
             if not continue_simulation:
@@ -444,10 +417,21 @@ class Engine:
                     self.evaluator.evaluate_communication(self.task, communications_str)
                 else:
                     self.logger.info("No communications to evaluate")
+                    # Store -1 if communications are empty
                     self.evaluator.metrics["communication_score"].append(-1)
 
                 # Evaluate planning
-                self.evaluator.metrics["planning_score"].append(-1)
+                agent_profiles = self._get_agent_profiles()
+                iteration_data_task_assignments = iteration_data.get("task_assignments")
+                assert isinstance(iteration_data_task_assignments, dict)
+                agent_tasks_str = self._format_agent_tasks(iteration_data_task_assignments)
+                iteration_data_task_results = iteration_data.get("task_results")
+                assert isinstance(iteration_data_task_results, list)
+                results_str = self._format_results(iteration_data_task_results)
+                iteration_data_summary = iteration_data.get("summary")
+                assert isinstance(iteration_data_summary, str)
+                self.evaluator.evaluate_planning(iteration_data_summary, agent_profiles, agent_tasks_str, results_str)
+                self.evaluator.evaluate_kpi(self.task, results_str)
                 # Decide whether to continue or terminate
                 if isinstance(self.environment, MinecraftEnvironment):
                     try:
@@ -506,9 +490,6 @@ class Engine:
                 except:
                     block_hit_rate = 0.0
                 summary_data["task_evaluation"] = block_hit_rate * 5
-            elif isinstance(self.environment, CodingEnvironment):
-                self._attach_coding_evaluation(summary_data)
-                self.logger.info("Engine graph-based coordination loop completed.")
             elif self.environment.name == "DB Environment":
                 self.evaluator.evaluate_task_db(
                     self.task,
@@ -521,7 +502,51 @@ class Engine:
                     "task_evaluation"
                 ]
                 self.logger.info("Engine graph-based coordination loop completed.")
+            elif isinstance(self.environment, CodingEnvironment):
+                iteration_data_summary = iteration_data.get("summary", "")
+                self.evaluator.evaluate_code_quality(self.task, iteration_data_summary)
+                summary_data["task_evaluation"] = self.evaluator.metrics["code_quality"]
+                self.logger.info("Engine graph-based coordination loop completed.")
             self.logger.info("Engine graph-based coordination loop completed.")
+
+            # --- LLMAMem: update episodic/procedural/transactive memory ---
+            # Use the evaluator's normalized outcome so the success flag
+            # reflects actual task quality, not just whether the run crashed.
+            task_outcome = self.evaluator.compute_task_outcome(
+                self.environment.name
+            )
+            summary_data["task_outcome"] = task_outcome
+
+            # Build a per-task summary that describes what each agent did
+            # across all iterations and what the overall result was.
+            task_summary_parts = []
+            for it_data in summary_data.get("iterations", []):
+                it_num = it_data.get("iteration", "?")
+                # Per-agent actions
+                for res in it_data.get("task_results", []):
+                    for aid, aresult in res.items():
+                        snippet = str(aresult)[:500]
+                        task_summary_parts.append(
+                            f"[Iter {it_num}] {aid}: {snippet}"
+                        )
+                # Planner summary for the iteration
+                it_summary = it_data.get("summary", "")
+                if it_summary:
+                    task_summary_parts.append(
+                        f"[Iter {it_num}] Planner summary: {str(it_summary)[:500]}"
+                    )
+            task_context = "\n".join(task_summary_parts) if task_summary_parts else ""
+
+            team_ids = [agent.agent_id for agent in self.agents]
+            for agent in self.agents:
+                if hasattr(agent.memory, 'update_after_task'):
+                    agent.memory.update_after_task(
+                        task_description=self.task,
+                        team_composition=team_ids,
+                        outcome=task_outcome,
+                        context=task_context,
+                        task_type=self.environment.name,
+                    )
 
         except Exception:
             self.logger.exception("An error occurred during graph-based coordination.")
@@ -652,7 +677,21 @@ class Engine:
                 ]
                 self.logger.info("Engine graph-based coordination loop completed.")
             if self.environment.name == "Coding Environment":
-                self._attach_coding_evaluation(summary_data)
+                solution_path = os.path.join(
+                    getattr(self.environment, "workspace_dir", "workspace"),
+                    "solution.py",
+                )
+                code = self._read_code_from_file(solution_path)
+                if code:
+                    self.evaluator.evaluate_code_quality(
+                        task=self.task, code_result=code
+                    )
+                    summary_data["code_quality"] = self.evaluator.metrics[
+                        "code_quality"
+                    ]
+                    self.logger.info(
+                        f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                    )
                 self.logger.info("Engine star-based coordination loop completed.")
             elif self.environment.name == "World Simulation Environment":
                 self.evaluator.evaluate_task_world(self.task, iteration_data["summary"])
@@ -938,7 +977,21 @@ class Engine:
                 ]
                 self.logger.info("Engine graph-based coordination loop completed.")
             if self.environment.name == "Coding Environment":
-                self._attach_coding_evaluation(summary_data)
+                solution_path = os.path.join(
+                    getattr(self.environment, "workspace_dir", "workspace"),
+                    "solution.py",
+                )
+                code = self._read_code_from_file(solution_path)
+                if code:
+                    self.evaluator.evaluate_code_quality(
+                        task=self.task, code_result=code
+                    )
+                    summary_data["code_quality"] = self.evaluator.metrics[
+                        "code_quality"
+                    ]
+                    self.logger.info(
+                        f"Code quality evaluation results: {self.evaluator.metrics['code_quality']}"
+                    )
                 self.logger.info("Engine tree-based coordination loop completed.")
             elif self.environment.name == "World Simulation Environment":
                 self.evaluator.evaluate_task_world(self.task, iteration_data["summary"])
@@ -1107,6 +1160,17 @@ class Engine:
         self.logger.debug(f"Summarized agents' results:\n{summary}")
         return summary
 
+    def _get_totoal_token_usage(self) -> Dict[str, int]:
+        """
+        Return the accumulated token usage (prompt, completion, total) for the
+        entire task run collected from all model_prompting calls.
+
+        Returns:
+            Dict[str, int]: Dictionary with keys 'prompt_tokens', 'completion_tokens',
+                            and 'total_tokens'.
+        """
+        return get_token_usage()
+
     def _write_to_jsonl(self, summary_data: Dict[str, Any]) -> None:
         """
         Write summary data to the JSONL file.
@@ -1118,6 +1182,7 @@ class Engine:
             "file_path", "result/discussion_output.jsonl"
         )
         try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True) if os.path.dirname(file_path) else None
             with open(file_path, "a") as jsonl_file:
                 print(summary_data)
                 jsonl_file.write(json.dumps(summary_data) + "\n")
@@ -1181,12 +1246,3 @@ class Engine:
                 for agent_id, res_content in result.items():
                     results_str.append(f"Agent {agent_id}: Result: {res_content}")
         return "\n".join(results_str)
-
-    def _get_totoal_token_usage(self) -> int:
-        """
-        Get the total token usage by all agents.
-        """
-        return (
-            sum(agent.token_usage for agent in self.graph.get_all_agents())
-            + self.planner.token_usage
-        )

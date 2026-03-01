@@ -1,5 +1,5 @@
 openai_api_key: "your api key"
-system_prompt_path: marble/agent/werewolf_prompts/system_prompt.yaml
+system_prompt_path: marble\\agent\\werewolf_prompts\\system_prompt.yaml
 roles:
   - wolf
   - wolf
@@ -13,15 +13,12 @@ roles:
 randomize_roles: True
 use_random_names: True
 villager_config:
-  base_url: "https://api.together.xyz/v1"
-  api_key: "unused"
-  model_name: "google.gemma-3-4b-it"
+  base_url: "https://api.openai.com/v1"
+  api_key: "your api key"
+  model_name: "gpt-4o"
 werewolf_config:
-  base_url: "https://api.together.xyz/v1"
-  api_key: "unused"
-  model_name: "google.gemma-3-4b-it"
+  base_url: "https://api.openai.com/v1"
+  api_key: "your api key"
+  model_name: "gpt-4o"
 cooperation_mode: "cooperative"
 use_daily_tasks: True
-llma_mem:
-  enabled: true
-  topology: "hybrid"

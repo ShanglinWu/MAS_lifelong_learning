@@ -128,7 +128,7 @@ def write_bio_prompting(
     model_name: str,
     return_num: Optional[int] = 1,
     max_token_num: Optional[int] = 512,
-    temperature: Optional[float] = 0.0,
+    temperature: Optional[float] = 0.7,
     top_p: Optional[float] = None,
     stream: Optional[bool] = None,
 ) -> str:
@@ -157,7 +157,7 @@ def summarize_domain_prompting(
     model_name: str,
     return_num: Optional[int] = 1,
     max_token_num: Optional[int] = 512,
-    temperature: Optional[float] = 0.0,
+    temperature: Optional[float] = 0.7,
     top_p: Optional[float] = None,
     stream: Optional[bool] = None,
 ) -> List[str]:

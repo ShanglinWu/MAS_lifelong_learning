@@ -9,6 +9,7 @@ def update_coding_config(
     benchmark_id,
     config_path="marble/configs/coding_config/coding_config.yaml",
     benchmark_path="marble/environments/coding_utils/assets/benchmark.jsonl",
+    llm_model=None,
 ):
     if not os.path.exists(config_path):
         print(f"Config file not found: {config_path}")
@@ -66,6 +67,10 @@ def update_coding_config(
     )
 
     config["task"]["content"] = updated_content
+
+    if llm_model is not None:
+        config["llm"] = llm_model
+        print(f"Config file updated to use LLM model: {llm_model}")
 
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
