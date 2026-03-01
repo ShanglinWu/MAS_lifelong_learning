@@ -7,6 +7,35 @@ from ruamel.yaml import YAML
 from marble.llms.model_prompting import model_prompting
 
 
+def _extract_python_code(text: str) -> str:
+    """Extract Python code from LLM response, handling truncated markdown fences.
+
+    The LLM may return code wrapped in ```python ... ``` blocks.  When the
+    response is truncated (e.g. token limit), the closing ``` may be missing.
+    This helper handles both cases.
+    """
+    # Try full fence first: ```python ... ```
+    match = re.search(r"```python(.*?)```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    # Handle truncated fence: ```python ... (no closing ```)
+    match = re.search(r"```python(.*)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    # Also handle generic ``` fences
+    match = re.search(r"```(.*?)```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    match = re.search(r"```(.*)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    return text.strip()
+
+
 def create_solution_handler(
     env, task_description: str, model_name: str = "", file_path: str = "solution.py"
 ) -> Dict[str, Any]:
@@ -83,17 +112,11 @@ def create_solution_handler(
                 {"role": "user", "content": user_prompt},
             ],
             return_num=1,
-            max_token_num=4096,
+            max_token_num=16384,
             temperature=0.7,
         )[0]
 
-        code_content = response.content
-
-        code_block_match = re.search(r"```python(.*?)```", code_content, re.DOTALL)
-        if code_block_match:
-            code_content = code_block_match.group(1).strip()
-        else:
-            code_content = code_content.strip()
+        code_content = _extract_python_code(response.content)
 
         with open(full_path, "w") as file:
             file.write(code_content)
@@ -179,20 +202,12 @@ def revise_solution_handler(env, task_description: str, model_name: str, file_pa
                 {"role": "user", "content": user_prompt}
             ],
             return_num=1,
-            max_token_num=4096,
+            max_token_num=16384,
             temperature=0.7
         )[0]
 
-        improved_code = response.content
+        improved_code = _extract_python_code(response.content)
 
-        # 提取 ```python ... ``` 内的代码
-        code_block_match = re.search(r"```python(.*?)```", improved_code, re.DOTALL)
-        if code_block_match:
-            improved_code = code_block_match.group(1).strip()
-        else:
-            improved_code = improved_code.strip()
-
-        # 更新文件内容
         with open(full_path, 'w') as file:
             file.write(improved_code)
 

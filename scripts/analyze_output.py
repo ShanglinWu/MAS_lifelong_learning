@@ -29,27 +29,48 @@ def safe_avg(values: List[Any]) -> Optional[float]:
     return sum(filtered) / len(filtered) if filtered else None
 
 
+def _get_dim_scores(record: Dict[str, Any]) -> List[int]:
+    """Return the list of dimension score values from task_evaluation."""
+    te = record.get("task_evaluation")
+    if not isinstance(te, dict):
+        return []
+    keys = ["executability", "instruction_following", "consistency", "quality"]
+    return [te[k] for k in keys if k in te and isinstance(te[k], (int, float))]
+
+
+def is_all_ones(record: Dict[str, Any]) -> bool:
+    """True when every dimension score is 1 (complete failure)."""
+    vals = _get_dim_scores(record)
+    return bool(vals) and all(v == 1 for v in vals)
+
+
 def is_failed(record: Dict[str, Any]) -> bool:
     """
-    A task is considered failed if every iteration has an empty task_results list.
-    This catches runs where agents produced no output at all.
+    A task is considered failed if:
+      - every iteration has an empty task_results list, OR
+      - all dimension scores are 1.
     """
     iterations = record.get("iterations", [])
     if not iterations:
         return True
-    return all(not iter_data.get("task_results") for iter_data in iterations)
+    if all(not iter_data.get("task_results") for iter_data in iterations):
+        return True
+    if is_all_ones(record):
+        return True
+    return False
 
 
 def compute_ts(record: Dict[str, Any]) -> Optional[float]:
     """
-    TS = avg(executability, instruction_following, consistency, quality) * 20.
-    Returns None if task_evaluation is missing or all three fields are absent.
+    TS = avg(non-1 dimension scores) * 20.
+    Any dimension score that equals 1 is excluded from the average.
+    Returns None if task_evaluation is missing or no valid (non-1) scores remain.
     """
     te = record.get("task_evaluation")
     if not isinstance(te, dict):
         return None
     keys = ["executability", "instruction_following", "consistency", "quality"]
-    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float))]
+    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float)) and te[k] != 1]
     if not values:
         return None
     return (sum(values) / len(values)) * 20
@@ -157,17 +178,18 @@ def analyze(path: str) -> None:
     print(f"{'='*88}")
     print()
     print("Summary")
-    print(f"  TS  = avg(executability + instruction_following + consistency + quality) × 20")
+    print(f"  TS  = avg(dimension scores, skipping any 1s) × 20")
     print(f"  CS  = avg(planning_scores + communication_scores, skip -1) × 20")
     print(f"  AP_t = (1/t) * sum(TS_1 .. TS_t)   [running avg of TS across first t passed tasks]")
     print(f"  AIP  = (1/T) * sum(AP_1 .. AP_T)   [mean of all AP_t values]")
+    print(f"  Tasks with all 1s are marked FAIL")
     print(f"  Avg TS                         : {avg_ts_str}")
     print(f"  Avg CS                         : {avg_cs_str}")
     print(f"  AIP                            : {aip_str}")
     print(f"  Avg input tokens  (per task)   : {avg_inp:.1f}")
     print(f"  Avg output tokens (per task)   : {avg_out:.1f}")
     print(f"  Passed / Total                 : {passed} / {len(records)}")
-    print(f"  Failed (excluded from averages): {failed_count}")
+    print(f"  Failed (all 1s or no output)   : {failed_count}")
     print(f"  Tasks with valid TS            : {len(per_task_ts)} / {passed}")
     print(f"  Tasks with valid CS            : {len(per_task_cs)} / {passed}")
     print(f"{'='*88}")
