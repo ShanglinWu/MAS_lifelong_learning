@@ -572,7 +572,7 @@ class Evaluator:
 
                     ### **Evaluation Criteria**
                     1. **Instruction-Following:** Does the code fulfill all the requirements of the task? Deduct points for unmet or partially met requirement from the task instructions.
-                    2. **Executability:** Is the code syntactically correct and executable? You should ignore formatting issues(wrong intend, or markdow pieces like ```python) and focus on content correctness.
+                    2. **Executability:** Is the code syntactically correct and executable? The solution may be wrapped in a JSON object (e.g. ```json {{"solution.py": "..."}}) with escaped newlines (\\n) and escaped quotes (\\"). This is just a delivery format — you MUST mentally parse and unescape the code before judging executability. Evaluate the actual Python code inside the JSON string value, NOT the JSON wrapper. Ignore formatting artifacts. Focus only on whether the underlying Python logic and syntax are correct.
                     3. **Consistency:** Is the code consistent in variable naming, formatting, and logic? Deduct points for inconsistent variable naming, formatting issues, or contradictory logic.
                     4. **Quality:** Is the code well-documented, clear, and modular? Deduct points for poor documentation, unclear logic, or lack of modular design.
 

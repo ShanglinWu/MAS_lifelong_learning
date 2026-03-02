@@ -24,13 +24,15 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a software system called CulturalExchangeHub that facilitates collaborative cultural exchanges and learning experiences among users from different parts of the world. CulturalExchangeHub is a web-based platform that connects individuals through interactive sessions, including virtual tours, language practice, and cultural workshops, while also providing tools for users to share and learn from each other’s cultural backgrounds.
+    Please write a game called 'Team_Tactics' that is a multiplayer action game designed to test the collaborative capabilities of multiple AI agents. Team_Tactics is a game where AI agents work together to complete objectives, such as capturing flags, defending bases, and eliminating enemy agents. The game is set in various dynamic environments, and agents must communicate and coordinate their actions to succeed.
     1. Implementation requirements:
-       - Develop a user registration and profile management system to allow users to create accounts, upload profile pictures, and fill in cultural backgrounds and interests. This system must be completed before any other features can be integrated.
-       - Create a virtual tour module that allows users to explore 3D models of cultural landmarks and historical sites. This module should include interactive elements such as clickable hotspots for additional information and audio guides. The virtual tour module must be built after the user registration system is in place.
-       - Implement a language learning and practice feature that pairs users for real-time language exchanges. This feature should include a translation tool to assist in communication. The language learning module can only be developed after the virtual tour module is functional.
-       - Design a cultural workshop module that hosts live and pre-recorded sessions led by cultural experts. Users should be able to join these sessions, ask questions, and participate in discussions. This module should be developed after the language learning feature is completed.
-       - Integrate a user feedback and rating system to allow users to rate and review their experiences with the platform, including the quality of virtual tours, language exchanges, and workshops. This system should be implemented as the final step, after all other modules are in place.
+       - Implement a game environment with multiple levels, each featuring different objectives (e.g., capture the flag, defend the base, eliminate enemies).
+       - Design AI agents with different roles (e.g., attacker, defender, scout) and abilities (e.g., increased speed, healing, shielding).
+       - Develop a communication system that allows AI agents to share information, such as enemy locations, objective status, and strategic plans.
+       - Create a scoring system that rewards successful completion of objectives and penalizes failures or inefficient play.
+       - Provide comprehensive test cases to validate the functionality of the game and the collaborative capabilities of the AI agents, including input scenarios, expected outputs, and edge cases.
+       - Test scenarios should include: agents successfully capturing the flag, defending the base from multiple attackers, and coordinating to eliminate all enemies in a level.
+       - Edge cases should cover: agents failing to communicate effectively, agents getting stuck or unable to navigate the environment, and unexpected interactions between different agent abilities.
 
 
     2. Project structure:
@@ -97,7 +99,8 @@ memory:
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
 
 metrics:
-  evaluate_llm: "bedrock/converse/us.anthropic.claude-opus-4-6-v1"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true

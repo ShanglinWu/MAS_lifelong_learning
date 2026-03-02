@@ -152,7 +152,7 @@ def analyze(path: str) -> None:
 
             # AP_t = running average of TS over all passed tasks seen so far
             if per_task_ts:
-                ap_t = sum(per_task_ts) / len(per_task_ts)
+                ap_t = (sum(per_task_ts) / len(per_task_ts))
                 per_task_ap.append(ap_t)
                 ap_str = f"{ap_t:.2f}"
             else:

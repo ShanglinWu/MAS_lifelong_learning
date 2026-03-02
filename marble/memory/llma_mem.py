@@ -139,7 +139,7 @@ class LLMAMem:
         self._current_actions = []
         self._last_retrieved_procedures = []
 
-    def retrieve(self, query: str, top_k: int = 2) -> str:
+    def retrieve(self, query: str, top_k: int = 3) -> str:
         """
         Retrieve relevant memories following hierarchical logic:
 
