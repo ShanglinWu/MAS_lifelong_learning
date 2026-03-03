@@ -25,7 +25,8 @@ from typing import Any, Dict, List, Optional
 
 def safe_avg(values: List[Any]) -> Optional[float]:
     """Return the mean of numeric values, excluding -1. None if nothing left."""
-    filtered = [v for v in values if isinstance(v, (int, float)) and v != -1]
+    # filtered = [v for v in values if isinstance(v, (int, float)) and v != -1]
+    filtered = [v for v in values if isinstance(v, (int, float))]
     return sum(filtered) / len(filtered) if filtered else None
 
 

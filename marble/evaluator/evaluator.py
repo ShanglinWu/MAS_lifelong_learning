@@ -646,8 +646,8 @@ class Evaluator:
 
         Normalises every environment's metrics to a 0-1 task_score and derives a
         boolean task_success flag using:
-            * 1-5 scale  →  success when mean score >= 2.0  (i.e. task_score >= 0.25)
-            * 0-1 scale  →  success when score >= 0.4
+            * 1-5 scale  →  success when mean score >= 2.5  (i.e. task_score >= 0.25)
+            * 0-1 scale  →  success when score >= 0.5
 
         Args:
             env_name: The environment name / type string.
@@ -668,7 +668,7 @@ class Evaluator:
                 dimension_scores = dict(cq)
                 raw_mean = sum(cq.values()) / len(cq)  # 1-5
                 task_score = (raw_mean - 1.0) / 4.0     # normalise to 0-1
-                task_success = raw_mean >= 2.0
+                task_success = raw_mean >= 2.5
             else:
                 task_score = 0.0
                 task_success = False
@@ -681,7 +681,7 @@ class Evaluator:
                 if vals:
                     raw_mean = sum(vals) / len(vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.0
+                    task_success = raw_mean >= 2.5
                 else:
                     task_score = 0.0
                     task_success = False
@@ -695,7 +695,7 @@ class Evaluator:
                 block_hit_rate = task_eval / 5.0  # back to 0-1
                 dimension_scores = {"block_hit_rate": block_hit_rate}
                 task_score = block_hit_rate
-                task_success = block_hit_rate >= 0.4
+                task_success = block_hit_rate >= 0.5
             else:
                 task_score = 0.0
                 task_success = False
@@ -712,7 +712,7 @@ class Evaluator:
                         1 for rc in root_causes if rc.lower() in predicted
                     )
                     task_score = matches / len(root_causes) if root_causes else 0.0
-                    task_success = task_score >= 0.4
+                    task_success = task_score >= 0.5
                 else:
                     task_score = 0.0
                     task_success = False
@@ -734,7 +734,7 @@ class Evaluator:
                 if all_vals:
                     raw_mean = sum(all_vals) / len(all_vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.0
+                    task_success = raw_mean >= 2.5
                 else:
                     task_score = 0.0
                     task_success = False

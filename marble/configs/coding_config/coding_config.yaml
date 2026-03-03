@@ -24,15 +24,16 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a game called 'Team_Tactics' that is a multiplayer action game designed to test the collaborative capabilities of multiple AI agents. Team_Tactics is a game where AI agents work together to complete objectives, such as capturing flags, defending bases, and eliminating enemy agents. The game is set in various dynamic environments, and agents must communicate and coordinate their actions to succeed.
+    Please write a multi-agent system called 'CyberArena' that simulates a futuristic battle arena where multiple AI-controlled robots compete in team-based challenges. CyberArena is a dynamic action game that allows robots to collaborate, adapt to changing environments, and use a variety of weapons and abilities to outsmart and outmaneuver their opponents.
     1. Implementation requirements:
-       - Implement a game environment with multiple levels, each featuring different objectives (e.g., capture the flag, defend the base, eliminate enemies).
-       - Design AI agents with different roles (e.g., attacker, defender, scout) and abilities (e.g., increased speed, healing, shielding).
-       - Develop a communication system that allows AI agents to share information, such as enemy locations, objective status, and strategic plans.
-       - Create a scoring system that rewards successful completion of objectives and penalizes failures or inefficient play.
-       - Provide comprehensive test cases to validate the functionality of the game and the collaborative capabilities of the AI agents, including input scenarios, expected outputs, and edge cases.
-       - Test scenarios should include: agents successfully capturing the flag, defending the base from multiple attackers, and coordinating to eliminate all enemies in a level.
-       - Edge cases should cover: agents failing to communicate effectively, agents getting stuck or unable to navigate the environment, and unexpected interactions between different agent abilities.
+       - Implement a real-time combat system where robots can engage in battles using a variety of weapons, including ranged and melee attacks.
+       - Design a team-based objective system where robots must work together to complete tasks, such as capturing flags, defending bases, or escorting payloads, with dynamic roles and responsibilities.
+       - Incorporate an adaptive difficulty system that adjusts the AI behavior and challenge level based on the performance of the robots, ensuring a balanced and engaging experience.
+       - Create a feedback loop where robots can learn from previous battles, adapt their strategies, and improve their teamwork over time.
+       - Develop a visual and audio environment that enhances the immersive experience, including dynamic lighting, particle effects, and realistic sound effects.
+       - Ensure smooth and responsive controls for the robots, allowing for fluid movement and precise actions, and provide options for customizing control schemes.
+       - Include a variety of power-ups and environmental hazards that can be strategically used to gain advantages or create obstacles for opponents.
+       - Implement a scoring system that rewards effective teamwork, strategic play, and successful completion of objectives, with clear visual and audio feedback to players.
 
 
     2. Project structure:
@@ -99,8 +100,8 @@ memory:
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
 
 metrics:
-  evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-  # evaluate_llm: "gpt-4o-mini-2024-07-18"
+  # evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true
