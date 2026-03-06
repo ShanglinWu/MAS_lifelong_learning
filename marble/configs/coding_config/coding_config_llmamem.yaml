@@ -24,14 +24,14 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a system called VideoCollabEditor that provides a collaborative platform for multiple users to edit videos in real-time. VideoCollabEditor is a collaborative video editing system that allows multiple users to perform editing tasks such as cutting, cropping, and adding effects to videos, with real-time synchronization and feedback mechanisms.
+    Please write a program called VideoCollaborationSuite. VideoCollaborationSuite is a collaborative video editing application that allows multiple users to work together on a video project in real-time. It provides tools for trimming, synchronizing subtitles, and adjusting playback speed, and supports real-time communication and feedback among team members.
     1. Implementation requirements:
-       - The system should support real-time collaboration, allowing multiple users to edit the same video simultaneously with changes being reflected immediately across all connected clients.
-       - Implement a user feedback mechanism that allows users to suggest changes or provide comments on specific sections of the video, which can be reviewed and applied by other users.
-       - The system should dynamically adjust to different user roles (e.g., editor, reviewer, owner) with corresponding permissions and capabilities, ensuring that changes are approved or reviewed as necessary.
-       - Support a variety of video editing features, including cutting, cropping, resizing, and applying filters or effects, with the ability to undo and redo actions.
-       - The system should provide a history of changes, allowing users to track edits and revert to previous versions if needed.
-       - Ensure the system can handle different video formats and resolutions, and provide options to export the final edited video in multiple formats suitable for various devices and platforms.
+       - The application must support multiple users editing a video simultaneously, with real-time updates and synchronization of changes.
+       - It should include a feature for automatic subtitle synchronization, allowing users to upload a video and subtitle file, and automatically align the subtitles with the video content. Users should be able to manually adjust the synchronization if needed.
+       - The application must provide a playback speed adjustment tool, allowing users to change the speed of the video playback for precise editing and review.
+       - The system should include a chat feature for real-time communication among users, enabling them to discuss and coordinate their editing activities.
+       - The application should support version control, allowing users to save different versions of the video and revert to previous states if necessary.
+       - The system should dynamically adapt to user feedback, such as suggestions for subtitle adjustments or playback speed changes, and allow for seamless collaboration and iterative improvements.
 
 
     2. Project structure:

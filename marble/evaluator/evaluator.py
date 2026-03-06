@@ -610,7 +610,7 @@ class Evaluator:
                 llm_model=self.llm,
                 messages=[{"role": "user", "content": prompt}],
                 return_num=1,
-                max_token_num=4096,
+                max_token_num=1024,
                 temperature=0.0,
                 top_p=None,
                 stream=None,
@@ -646,7 +646,7 @@ class Evaluator:
 
         Normalises every environment's metrics to a 0-1 task_score and derives a
         boolean task_success flag using:
-            * 1-5 scale  →  success when mean score >= 2.5  (i.e. task_score >= 0.25)
+            * 1-5 scale  →  success when mean score >= 3  (i.e. task_score >= 0.25)
             * 0-1 scale  →  success when score >= 0.65
 
         Args:
@@ -668,7 +668,7 @@ class Evaluator:
                 dimension_scores = dict(cq)
                 raw_mean = sum(cq.values()) / len(cq)  # 1-5
                 task_score = (raw_mean - 1.0) / 4.0     # normalise to 0-1
-                task_success = raw_mean >= 2.5
+                task_success = raw_mean >= 3.0
             else:
                 task_score = 0.0
                 task_success = False
@@ -681,7 +681,7 @@ class Evaluator:
                 if vals:
                     raw_mean = sum(vals) / len(vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.5
+                    task_success = raw_mean >= 3
                 else:
                     task_score = 0.0
                     task_success = False
@@ -734,7 +734,7 @@ class Evaluator:
                 if all_vals:
                     raw_mean = sum(all_vals) / len(all_vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.5
+                    task_success = raw_mean >= 3.0
                 else:
                     task_score = 0.0
                     task_success = False
