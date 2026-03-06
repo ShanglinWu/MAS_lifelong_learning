@@ -199,7 +199,7 @@ class Engine:
         if memory_type == "LLMAMem":
             topology = memory_config.get("topology", "local")
             persist_dir = memory_config.get("persist_dir", "memory_store")
-            consolidation_interval = memory_config.get("consolidation_interval", 3)
+            consolidation_interval = memory_config.get("consolidation_interval", 5)
             agent_ids = [agent.agent_id for agent in self.agents]
             llma_memories = LLMAMem.create_for_topology(
                 topology=topology,

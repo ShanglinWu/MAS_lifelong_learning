@@ -173,7 +173,7 @@ class EnginePlanner:
                     llm_model=self.model,
                     messages=messages_agent,
                     return_num=1,
-                    max_token_num=512,
+                    max_token_num=1024,
                     temperature=0.7,
                     top_p=1.0,
                 )

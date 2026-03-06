@@ -71,7 +71,7 @@ class ShortTermMemory(BaseMemory):
                 {"role": "user", "content": prompt},
             ],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,

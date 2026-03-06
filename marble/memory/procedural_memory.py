@@ -13,7 +13,6 @@ Schema per spec:
 """
 
 import json
-import math
 import os
 from typing import Any, Dict, List, Optional, Set
 
@@ -31,8 +30,8 @@ class ProceduralMemory:
 
     Success rate: ρ_j = s_j / (s_j + f_j + ε)
 
-    Retrieval uses multi-factor scoring:
-        score(m, q) = λ_r * recency(m) + λ_v * relevance(m, q) + λ_i * importance(m)
+    Retrieval uses:
+        score(m, q) = relevance(m, q) + importance(m)
     where for procedural memory, m is title + knowledge_content.
         importance(p_j) = ρ_j  (success rate)
     """
@@ -165,15 +164,11 @@ class ProceduralMemory:
         current_time: Optional[int] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         """
-        Retrieve the most relevant procedures using multi-factor scoring.
-
-        score(m, q) = λ_r * recency(m) + λ_v * relevance(m, q) + λ_i * importance(m)
-
-        Where:
-            λ_r = 0.2 λ_v = 0.4, λ_i = 0.4
-            recency(m) = exp(t_m - t_current)
+        Retrieve the most relevant procedures using:
+            score(m, q) = relevance(m, q) + importance(m)
+        where:
             relevance(m, q) = cosine_similarity(embed(title+content), embed(query))
-            importance(p_j) = ρ_j  (success rate)
+            importance(p_j) = ρ_j (success rate)
 
         Args:
             query: The query string (current task description).
@@ -186,18 +181,12 @@ class ProceduralMemory:
         if not self.procedures:
             return None
 
-        if current_time is None:
-            current_time = self._procedure_counter
-
         # Compute query embedding
         query_emb = text_embedding(model=self.EMBEDDING_MODEL, input=query)
         query_emb_array = np.array(query_emb).reshape(1, -1)
 
         scored_procedures: List[tuple] = []
         for i, proc in enumerate(self.procedures):
-            # recency(m) = exp(t_m - t_current)
-            recency = math.exp(proc["timestamp_updated"] - current_time)
-
             # relevance(m, q) = cosine_similarity(embed(title+content), embed(query))
             proc_emb = np.array(self.embeddings[i]).reshape(1, -1)
             relevance = float(
@@ -207,8 +196,8 @@ class ProceduralMemory:
             # importance(p_j) = ρ_j (purely success rate)
             importance = proc["success_rate"]
 
-            # Multi-factor scoring with paper weights
-            score = 0.2 * recency + 0.4 * relevance + 0.4 * importance
+            # Requested scoring: no recency, no weighting
+            score = relevance + importance
             scored_procedures.append((score, proc))
 
         scored_procedures.sort(key=lambda x: x[0], reverse=True)

@@ -24,13 +24,14 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a system called Collaborative Build Optimizer (CBO) that enhances the build process for software projects by integrating code efficiency analysis, task management, and build time estimation. Collaborative Build Optimizer is a comprehensive development tool designed to optimize the build process by analyzing code efficiency, managing development tasks with dependencies, and estimating build times, thereby improving overall development productivity and project management.
+    Please write a program called VideoCollaborationSuite. VideoCollaborationSuite is a collaborative video editing application that allows multiple users to work together on a video project in real-time. It provides tools for trimming, synchronizing subtitles, and adjusting playback speed, and supports real-time communication and feedback among team members.
     1. Implementation requirements:
-       - Develop a Code Efficiency Analyzer module that evaluates the efficiency of code snippets and provides recommendations for optimizing performance based on metrics such as time complexity, space complexity, and algorithmic inefficiencies. This module must be completed before integrating it into the main system.
-       - Create a Development Task Tracker module that allows development teams to manage and track project tasks, including setting task priorities, due dates, and dependencies between tasks. This module must be completed and integrated into the main system after the Code Efficiency Analyzer module is ready.
-       - Implement a Build Time Estimator module that calculates the estimated time required to build a software project based on code complexity, number of modules, and development team size. This module must be developed and integrated into the main system after the Development Task Tracker module is functional.
-       - Integrate all three modules into a unified system where the Code Efficiency Analyzer provides insights that can be used to optimize tasks in the Development Task Tracker, and the Build Time Estimator takes into account the optimized code and task management to provide more accurate build time estimates.
-       - Ensure that the system supports real-time updates and notifications for task status, build progress, and efficiency recommendations, enhancing collaboration and communication among team members.
+       - The application must support multiple users editing a video simultaneously, with real-time updates and synchronization of changes.
+       - It should include a feature for automatic subtitle synchronization, allowing users to upload a video and subtitle file, and automatically align the subtitles with the video content. Users should be able to manually adjust the synchronization if needed.
+       - The application must provide a playback speed adjustment tool, allowing users to change the speed of the video playback for precise editing and review.
+       - The system should include a chat feature for real-time communication among users, enabling them to discuss and coordinate their editing activities.
+       - The application should support version control, allowing users to save different versions of the video and revert to previous states if necessary.
+       - The system should dynamically adapt to user feedback, such as suggestions for subtitle adjustments or playback speed changes, and allow for seamless collaboration and iterative improvements.
 
 
     2. Project structure:

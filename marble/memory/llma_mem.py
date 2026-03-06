@@ -16,7 +16,7 @@ Memory lifecycle:
     1. Initialization  (all empty at t=0)
     2. Retrieval       (hierarchical: procedural first, fall back to episodic)
     3. Update          (episodic addition, procedural update, transactive update)
-    4. Consolidation   (every N=3 episodes, extract procedures from episodes)
+    4. Consolidation   (every N=5 episodes, extract procedures from episodes)
 """
 
 import json
@@ -47,7 +47,7 @@ class LLMAMem:
     """
 
     EMBEDDING_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
-    DEFAULT_CONSOLIDATION_INTERVAL = 3  # N = 3 episodes
+    DEFAULT_CONSOLIDATION_INTERVAL = 5  # N = 5 episodes
 
     def __init__(
         self,
@@ -58,7 +58,7 @@ class LLMAMem:
         local_transactive: Optional[TransactiveMemory] = None,
         llm_model: str = "",
         persist_dir: str = "memory_store",
-        consolidation_interval: int = 3,
+        consolidation_interval: int = 5,
     ) -> None:
         """
         Initialize LLMA-Mem.
@@ -74,7 +74,7 @@ class LLMAMem:
             local_transactive: Local transactive memory (hybrid topology only).
             llm_model: LLM model for consolidation and lesson extraction.
             persist_dir: Directory for file persistence.
-            consolidation_interval: Episodes between consolidations (N=3).
+            consolidation_interval: Episodes between consolidations (N=5).
         """
         self.agent_id = agent_id
         self.llm_model = llm_model
@@ -191,12 +191,28 @@ class LLMAMem:
 
     def _format_procedural_results(self, procedures: List[Dict[str, Any]]) -> str:
         """Format procedural memory results into a prompt-ready string."""
-        parts = ["[Relevant Procedures & Strategies]"]
+        def _to_text(value: Any) -> str:
+            if isinstance(value, str):
+                return value
+            if isinstance(value, (dict, list)):
+                try:
+                    return json.dumps(value, ensure_ascii=False)
+                except Exception:
+                    return str(value)
+            return str(value)
+
+        parts = [
+            "[Relevant Procedures & Strategies]"
+        ]
         for proc in procedures:
+            title = _to_text(proc.get("title", "Untitled Procedure"))
+            knowledge = _to_text(proc.get("knowledge_content", ""))
             parts.append(
-                f"- {proc['title']} (success rate: {proc['success_rate']:.2f})"
+                f"- {title} (success rate: {float(proc.get('success_rate', 0.0)):.2f})"
             )
-            parts.append(f"  Strategy: {proc['knowledge_content'][:300]}")
+            parts.append(
+                f"  Strategy : {knowledge[:500]}"
+            )
         return "\n".join(parts)
 
     # ==================================================================
@@ -234,7 +250,7 @@ class LLMAMem:
            ξ_k = successes_k / total_tasks_k
            Also updates specialization areas, ρ and ω in team_patterns.
 
-        4. Triggers consolidation every N episodes (N=3).
+        4. Triggers consolidation every N episodes (N=5).
 
         Args:
             task_description: Description of the completed task.
@@ -386,16 +402,16 @@ class LLMAMem:
         prompt = (
             "Based on the following task experience, extract 1-2 concise, actionable lessons learned.\n"
             "Focus on CONCRETE actions: which tool functions should have been called, "
-            "what code patterns worked or failed, and what specific steps to take next time.\n"
+            "what patterns worked or failed, and what specific steps to take next time.\n"
             "Do NOT suggest vague advice like 'communicate better' or 'provide clearer instructions'.\n"
-            "Instead, suggest specific tool calls or coding strategies.\n\n"
+            "Instead, suggest specific tool calls or strategies.\n\n"
             f"Task: {task_description[:500]}\n\n"
             f"{context_section}"
             f"Actions taken: {actions_str}\n"
             f"Outcome: {outcome_str}\n\n"
             f"{focus}\n"
             "Return the lessons as a JSON array of strings. Example:\n"
-            '["Lesson 1", "Lesson 2", "Lesson 3"]\n'
+            '["Lesson 1", "Lesson 2"]\n'
         )
 
         try:
@@ -412,7 +428,7 @@ class LLMAMem:
                     {"role": "user", "content": prompt},
                 ],
                 return_num=1,
-                max_token_num=512,
+                max_token_num=1024,
                 temperature=0.7,
                 top_p=None,
                 stream=None,
@@ -560,11 +576,12 @@ class LLMAMem:
 
         prompt = (
             "Based on the following successful task experiences, extract a generalized "
-            "strategy or skill that can be reused in similar future situations:\n\n"
+            "and actionable strategy and skill that can be reused in similar future situations.\n"
+            "Avoid vague advice.\n\n"
             f"{episodes_str}\n"
             "Respond in JSON format:\n"
             '{"title": "Short descriptive title", '
-            '"knowledge_content": "Detailed reusable strategy description"}\n'
+            '"knowledge_content": "Detailed strategy and skill description"}\n'
         )
 
         try:
@@ -581,7 +598,7 @@ class LLMAMem:
                     {"role": "user", "content": prompt},
                 ],
                 return_num=1,
-                max_token_num=512,
+                max_token_num=1024,
                 temperature=0.7,
                 top_p=None,
                 stream=None,
@@ -591,9 +608,15 @@ class LLMAMem:
             end = content.rfind("}")
             if start != -1 and end != -1:
                 data = json.loads(content[start : end + 1])
+                knowledge_value = data.get("knowledge_content", "")
+                if not isinstance(knowledge_value, str):
+                    try:
+                        knowledge_value = json.dumps(knowledge_value, ensure_ascii=False)
+                    except Exception:
+                        knowledge_value = str(knowledge_value)
                 return (
                     data.get("title", "Extracted Strategy"),
-                    data.get("knowledge_content", ""),
+                    knowledge_value,
                 )
             return "Extracted Strategy", content.strip()
         except Exception:
@@ -669,7 +692,7 @@ class LLMAMem:
         agent_ids: List[str],
         llm_model: str = "",
         persist_dir: str = "memory_store",
-        consolidation_interval: int = 3,
+        consolidation_interval: int = 5,
     ) -> Dict[str, "LLMAMem"]:
         """
         Create LLMAMem instances for all agents based on topology configuration.
@@ -687,7 +710,7 @@ class LLMAMem:
             agent_ids: List of agent identifiers.
             llm_model: LLM model for consolidation.
             persist_dir: Persistence directory.
-            consolidation_interval: Episodes between consolidations (N=3).
+            consolidation_interval: Episodes between consolidations (N=5).
 
         Returns:
             Dict mapping agent_id to LLMAMem instance.

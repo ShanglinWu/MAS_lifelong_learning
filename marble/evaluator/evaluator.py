@@ -104,7 +104,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -140,7 +140,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -172,7 +172,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -208,7 +208,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -239,7 +239,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -572,7 +572,7 @@ class Evaluator:
 
                     ### **Evaluation Criteria**
                     1. **Instruction-Following:** Does the code fulfill all the requirements of the task? Deduct points for unmet or partially met requirement from the task instructions.
-                    2. **Executability:** Is the code syntactically correct and executable? The solution may be wrapped in a JSON object (e.g. ```json {{"solution.py": "..."}}) with escaped newlines (\\n) and escaped quotes (\\"). This is just a delivery format — you MUST mentally parse and unescape the code before judging executability. Evaluate the actual Python code inside the JSON string value, NOT the JSON wrapper. Ignore formatting artifacts. Focus only on whether the underlying Python logic and syntax are correct.
+                    2. **Executability:** Is the code syntactically correct and executable? Deduct points for any syntax errors, missing imports, or runtime errors.
                     3. **Consistency:** Is the code consistent in variable naming, formatting, and logic? Deduct points for inconsistent variable naming, formatting issues, or contradictory logic.
                     4. **Quality:** Is the code well-documented, clear, and modular? Deduct points for poor documentation, unclear logic, or lack of modular design.
 
@@ -647,7 +647,7 @@ class Evaluator:
         Normalises every environment's metrics to a 0-1 task_score and derives a
         boolean task_success flag using:
             * 1-5 scale  →  success when mean score >= 2.5  (i.e. task_score >= 0.25)
-            * 0-1 scale  →  success when score >= 0.5
+            * 0-1 scale  →  success when score >= 0.65
 
         Args:
             env_name: The environment name / type string.
@@ -695,7 +695,7 @@ class Evaluator:
                 block_hit_rate = task_eval / 5.0  # back to 0-1
                 dimension_scores = {"block_hit_rate": block_hit_rate}
                 task_score = block_hit_rate
-                task_success = block_hit_rate >= 0.5
+                task_success = block_hit_rate >= 0.65
             else:
                 task_score = 0.0
                 task_success = False
@@ -712,7 +712,7 @@ class Evaluator:
                         1 for rc in root_causes if rc.lower() in predicted
                     )
                     task_score = matches / len(root_causes) if root_causes else 0.0
-                    task_success = task_score >= 0.5
+                    task_success = task_score >= 0.65
                 else:
                     task_score = 0.0
                     task_success = False

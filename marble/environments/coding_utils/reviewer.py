@@ -111,7 +111,7 @@ def give_advice_and_revise_handler(
             ],
             return_num=1,
             max_token_num=4096,
-            temperature=0.7,
+            temperature=0.1,
         )[0]
 
         # Step 2: Generate modification strategy
@@ -151,7 +151,7 @@ def give_advice_and_revise_handler(
             ],
             return_num=1,
             max_token_num=4096,
-            temperature=0.7,
+            temperature=0.1,
         )[0]
 
         # 记录原始响应

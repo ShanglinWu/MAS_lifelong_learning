@@ -3,7 +3,9 @@ Analyze a MARBLE development_output.jsonl file and report per-task and
 aggregate averages for:
 
   TS  = avg(executability, instruction_following, consistency) * 50
-  CS  = avg(planning_scores + communication_scores, skip -1) * 20  AP_t = (1/t) * sum(TS_1 ... TS_t)   [running average of TS up to task t]
+  CS  = avg(part_planning, part_communication) * 20,
+        where each part avg skips -1, and an all--1 part is treated as 0.
+  AP_t = (1/t) * sum(TS_1 ... TS_t)   [running average of TS up to task t]
   AIP  = (1/T) * sum(AP_1 ... AP_T)   [mean of all running averages]  Input tokens, Output tokens (from token_usage)
 
   Failed tasks (all iterations have empty task_results) are listed but
@@ -16,7 +18,7 @@ Usage:
 
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -25,8 +27,7 @@ from typing import Any, Dict, List, Optional
 
 def safe_avg(values: List[Any]) -> Optional[float]:
     """Return the mean of numeric values, excluding -1. None if nothing left."""
-    # filtered = [v for v in values if isinstance(v, (int, float)) and v != -1]
-    filtered = [v for v in values if isinstance(v, (int, float))]
+    filtered = [v for v in values if isinstance(v, (int, float)) and v != -1]
     return sum(filtered) / len(filtered) if filtered else None
 
 
@@ -78,12 +79,44 @@ def compute_ts(record: Dict[str, Any]) -> Optional[float]:
 
 def compute_cs(record: Dict[str, Any]) -> Optional[float]:
     """
-    CS = avg(planning_scores + communication_scores, skip -1) * 20.
-    Returns None if no valid scores exist.
+    CS is computed from two parts (planning, communication):
+      - For each part, average valid numeric values excluding -1.
+      - If a part exists but all its values are -1, that part is treated as 0.
+      - Final CS = avg(part_planning, part_communication) * 20.
+
+    Returns None only if neither part has any numeric entries at all.
     """
-    all_scores = record.get("planning_scores", []) + record.get("communication_scores", [])
-    avg = safe_avg(all_scores)
-    return avg * 20 if avg is not None else None
+    planning = [v for v in record.get("planning_scores", []) if isinstance(v, (int, float))]
+    communication = [v for v in record.get("communication_scores", []) if isinstance(v, (int, float))]
+
+    def _part_avg(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        valid = [v for v in values if v != -1]
+        if valid:
+            return sum(valid) / len(valid)
+        # Part exists and all are -1 -> treat as 0 by requirement.
+        return 0.0
+
+    p_avg = _part_avg(planning)
+    c_avg = _part_avg(communication)
+
+    parts = [v for v in [p_avg, c_avg] if v is not None]
+    if not parts:
+        return None
+    return (sum(parts) / len(parts)) * 20
+
+
+def compute_cs_details(record: Dict[str, Any]) -> Tuple[List[float], List[float], List[float], Optional[float]]:
+    """
+    Return CS detail components:
+      planning_scores, communication_scores, combined_valid_scores(skip -1), cs_value
+    """
+    planning = [v for v in record.get("planning_scores", []) if isinstance(v, (int, float))]
+    communication = [v for v in record.get("communication_scores", []) if isinstance(v, (int, float))]
+    combined_valid = [v for v in (planning + communication) if v != -1]
+    cs = compute_cs(record)
+    return planning, communication, combined_valid, cs
 
 
 def compute_tokens(record: Dict[str, Any]):
@@ -98,7 +131,7 @@ def compute_tokens(record: Dict[str, Any]):
 # Main
 # ---------------------------------------------------------------------------
 
-def analyze(path: str) -> None:
+def analyze(path: str, debug_scores: bool = False) -> None:
     records = []
     with open(path, "r", encoding="utf-8") as f:
         for lineno, raw in enumerate(f, 1):
@@ -160,6 +193,22 @@ def analyze(path: str) -> None:
                 ap_str = "N/A"
 
         print(f"{i:>5}  {status:>6}  {ts_str:>8}  {cs_str:>8}  {ap_str:>8}  {inp:>12,}  {out:>12,}")
+        if debug_scores:
+            te = rec.get("task_evaluation", {})
+            exec_v = te.get("executability") if isinstance(te, dict) else None
+            instr_v = te.get("instruction_following") if isinstance(te, dict) else None
+            cons_v = te.get("consistency") if isinstance(te, dict) else None
+            qual_v = te.get("quality") if isinstance(te, dict) else None
+            planning, communication, cs_valid, cs_dbg = compute_cs_details(rec)
+
+            print(
+                "       TS detail:"
+                f" exec={exec_v}, instr={instr_v}, cons={cons_v}, qual={qual_v}, TS={ts_str}"
+            )
+            print(
+                "       CS detail:"
+                f" planning={planning}, communication={communication}, valid_no_-1={cs_valid}, CS={f'{cs_dbg:.2f}' if cs_dbg is not None else 'N/A'}"
+            )
 
     print("-" * len(header))
 
@@ -179,7 +228,8 @@ def analyze(path: str) -> None:
     print()
     print("Summary")
     print(f"  TS  = avg(executability + instruction_following + consistency + quality) × 20")
-    print(f"  CS  = avg(planning_scores + communication_scores, skip -1) × 20")
+    print(f"  CS  = avg(planning_part, communication_part) × 20")
+    print(f"        each part skips -1; if a whole part is all -1, that part = 0")
     print(f"  AP_t = (1/t) * sum(TS_1 .. TS_t)   [running avg of TS across first t passed tasks]")
     print(f"  AIP  = (1/T) * sum(AP_1 .. AP_T)   [mean of all AP_t values]")
     print(f"  Tasks with all 1s are marked FAIL")
@@ -197,6 +247,8 @@ def analyze(path: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python scripts/analyze_output.py <path_to_jsonl>")
+        print("Usage: python scripts/analyze_output.py <path_to_jsonl> [--debug-scores]")
         sys.exit(1)
-    analyze(sys.argv[1])
+    path_arg = sys.argv[1]
+    debug_flag = "--debug-scores" in sys.argv[2:]
+    analyze(path_arg, debug_scores=debug_flag)

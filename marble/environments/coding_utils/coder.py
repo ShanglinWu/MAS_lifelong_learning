@@ -112,8 +112,8 @@ def create_solution_handler(
                 {"role": "user", "content": user_prompt},
             ],
             return_num=1,
-            max_token_num=8192,
-            temperature=0.7,
+            max_token_num=4096,
+            temperature=0.1,
         )[0]
 
         code_content = _extract_python_code(response.content)
@@ -202,8 +202,8 @@ def revise_solution_handler(env, task_description: str, model_name: str, file_pa
                 {"role": "user", "content": user_prompt}
             ],
             return_num=1,
-            max_token_num=8192,
-            temperature=0.7
+            max_token_num=4096,
+            temperature=0.1
         )[0]
 
         improved_code = _extract_python_code(response.content)
@@ -254,34 +254,34 @@ def register_coder_actions(env):
         },
     )
 
-    # 如果需要，也可以类似地注册 revise_solution 动作（目前该函数为注释状态）
-    env.register_action(
-        "revise_solution",
-        handler=lambda **kwargs: revise_solution_handler(env, **kwargs),
-        description={
-            "type": "function",
-            "function": {
-                "name": "revise_solution",
-                "description": "Revise existing solution file by improving/modifying code based on task description",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "task_description": {
-                            "type": "string",
-                            "description": "Description of the task to implement"
-                        },
-                        "model_name": {
-                            "type": "string",
-                            "description": "Name of the LLM model to use"
-                        },
-                        "file_path": {
-                            "type": "string",
-                            "description": "Path of the solution file to revise (optional, defaults to 'solution.py')"
-                        }
-                    },
-                    "required": ["task_description", "model_name"],
-                    "additionalProperties": False
-                }
-            }
-        }
-    )
+    # # 如果需要，也可以类似地注册 revise_solution 动作（目前该函数为注释状态）
+    # env.register_action(
+    #     "revise_solution",
+    #     handler=lambda **kwargs: revise_solution_handler(env, **kwargs),
+    #     description={
+    #         "type": "function",
+    #         "function": {
+    #             "name": "revise_solution",
+    #             "description": "Revise existing solution file by improving/modifying code based on task description",
+    #             "parameters": {
+    #                 "type": "object",
+    #                 "properties": {
+    #                     "task_description": {
+    #                         "type": "string",
+    #                         "description": "Description of the task to implement"
+    #                     },
+    #                     "model_name": {
+    #                         "type": "string",
+    #                         "description": "Name of the LLM model to use"
+    #                     },
+    #                     "file_path": {
+    #                         "type": "string",
+    #                         "description": "Path of the solution file to revise (optional, defaults to 'solution.py')"
+    #                     }
+    #                 },
+    #                 "required": ["task_description", "model_name"],
+    #                 "additionalProperties": False
+    #             }
+    #         }
+    #     }
+    # )

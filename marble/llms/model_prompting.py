@@ -40,7 +40,7 @@ def model_prompting(
     llm_model: str,
     messages: List[Dict[str, str]],
     return_num: Optional[int] = 1,
-    max_token_num: Optional[int] = 512,
+    max_token_num: Optional[int] = 1024,
     temperature: Optional[float] = 0.0,
     top_p: Optional[float] = None,
     stream: Optional[bool] = None,

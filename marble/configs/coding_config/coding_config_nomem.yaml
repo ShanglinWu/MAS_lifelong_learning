@@ -24,11 +24,14 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a software system called Cultural_Journey that provides an interactive and educational experience for users to explore different cultures through a combination of quizzes, puzzles, and recipe exploration. Cultural_Journey is a comprehensive system that integrates various cultural elements into a single platform, allowing users to deepen their understanding of different traditions, customs, and cuisines from around the world.
+    Please write a program called VideoCollaborationSuite. VideoCollaborationSuite is a collaborative video editing application that allows multiple users to work together on a video project in real-time. It provides tools for trimming, synchronizing subtitles, and adjusting playback speed, and supports real-time communication and feedback among team members.
     1. Implementation requirements:
-       - 1. **Quiz Module Development**: Develop a quiz module that includes multiple-choice questions about cultural traditions, customs, and festivals. This module should be the first to be completed as it provides the foundational knowledge required for the other modules.
-       - 2. **Puzzle Module Development**: Once the Quiz Module is complete, develop a puzzle module that features cultural scenes and elements. Users should solve puzzles by matching pieces that represent different aspects of a culture, such as traditional clothing, landmarks, and animals. The Quiz Module will provide the necessary cultural context for the puzzles.
-       - 3. **Recipe Module Development**: After the Puzzle Module is ready, create a recipe module that allows users to explore traditional dishes from different cultures. This module should include step-by-step instructions, ingredient lists, cooking tips, and cultural insights. The Quiz and Puzzle Modules will have prepared users with the necessary cultural background to appreciate the culinary practices.
+       - The application must support multiple users editing a video simultaneously, with real-time updates and synchronization of changes.
+       - It should include a feature for automatic subtitle synchronization, allowing users to upload a video and subtitle file, and automatically align the subtitles with the video content. Users should be able to manually adjust the synchronization if needed.
+       - The application must provide a playback speed adjustment tool, allowing users to change the speed of the video playback for precise editing and review.
+       - The system should include a chat feature for real-time communication among users, enabling them to discuss and coordinate their editing activities.
+       - The application should support version control, allowing users to save different versions of the video and revert to previous states if necessary.
+       - The system should dynamically adapt to user feedback, such as suggestions for subtitle adjustments or playback speed changes, and allow for seamless collaboration and iterative improvements.
 
 
     2. Project structure:

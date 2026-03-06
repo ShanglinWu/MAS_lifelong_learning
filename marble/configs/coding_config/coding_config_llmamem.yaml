@@ -12,7 +12,7 @@ relationships:
   - [agent3, agent2, "collaborates with"]
   # - [agent3, agent4, "collaborates with"]
 
-llm: "bedrock/converse/qwen.qwen3-next-80b-a3b"
+llm: "bedrock/converse/qwen.qwen3-32b-v1:0"
 
 environment:
   type: Coding
@@ -24,11 +24,14 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a software system called Cultural_Journey that provides an interactive and educational experience for users to explore different cultures through a combination of quizzes, puzzles, and recipe exploration. Cultural_Journey is a comprehensive system that integrates various cultural elements into a single platform, allowing users to deepen their understanding of different traditions, customs, and cuisines from around the world.
+    Please write a system called VideoCollabEditor that provides a collaborative platform for multiple users to edit videos in real-time. VideoCollabEditor is a collaborative video editing system that allows multiple users to perform editing tasks such as cutting, cropping, and adding effects to videos, with real-time synchronization and feedback mechanisms.
     1. Implementation requirements:
-       - 1. **Quiz Module Development**: Develop a quiz module that includes multiple-choice questions about cultural traditions, customs, and festivals. This module should be the first to be completed as it provides the foundational knowledge required for the other modules.
-       - 2. **Puzzle Module Development**: Once the Quiz Module is complete, develop a puzzle module that features cultural scenes and elements. Users should solve puzzles by matching pieces that represent different aspects of a culture, such as traditional clothing, landmarks, and animals. The Quiz Module will provide the necessary cultural context for the puzzles.
-       - 3. **Recipe Module Development**: After the Puzzle Module is ready, create a recipe module that allows users to explore traditional dishes from different cultures. This module should include step-by-step instructions, ingredient lists, cooking tips, and cultural insights. The Quiz and Puzzle Modules will have prepared users with the necessary cultural background to appreciate the culinary practices.
+       - The system should support real-time collaboration, allowing multiple users to edit the same video simultaneously with changes being reflected immediately across all connected clients.
+       - Implement a user feedback mechanism that allows users to suggest changes or provide comments on specific sections of the video, which can be reviewed and applied by other users.
+       - The system should dynamically adjust to different user roles (e.g., editor, reviewer, owner) with corresponding permissions and capabilities, ensuring that changes are approved or reviewed as necessary.
+       - Support a variety of video editing features, including cutting, cropping, resizing, and applying filters or effects, with the ability to undo and redo actions.
+       - The system should provide a history of changes, allowing users to track edits and revert to previous versions if needed.
+       - Ensure the system can handle different video formats and resolutions, and provide options to export the final edited video in multiple formats suitable for various devices and platforms.
 
 
     2. Project structure:
@@ -89,9 +92,9 @@ agents:
 
 memory:
   type: LLMAMem
-  topology: shared    # or "shared" or "hybrid"
+  topology: local    # "local" or "shared" or "hybrid"
   persist_dir: memory_store/llmamem
-  consolidation_interval: 3
+  consolidation_interval: 5
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
 
 metrics:
@@ -106,4 +109,4 @@ engine_planner:
 
 output:
   format: jsonl
-  file_path: "result/llmamem/development_output_bedrock_converse_qwen.qwen3-next-80b-a3b.jsonl"
+  file_path: "result/llmamem/development_output_bedrock_converse_qwen.qwen3-32b-v1_0.jsonl"

@@ -94,9 +94,9 @@ agents:
 
 memory:
   type: LLMAMem
-  topology: shared    # or "shared" or "hybrid"
+  topology: local    # "local" or "shared" or "hybrid"
   persist_dir: memory_store
-  consolidation_interval: 3
+  consolidation_interval: 5
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
 
 metrics:

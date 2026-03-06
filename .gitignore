@@ -209,3 +209,13 @@ marble/workspace
 marble/logs
 marble/results
 backup/
+
+# Generated coding experiment artifacts
+.checkpoints/
+text.ipynb
+test.log
+marble/marble/logs/
+marble/logs/
+marble/result/
+marble/memory_store/
+marble/workspace_*/
