@@ -1680,7 +1680,7 @@ async def place_axis(bot, mcData, pathfinder, Vec3, item_name, pos, axis=None):
         )
 
 
-dig_file = "../data/dig_item.json"
+dig_file = os.path.join(os.path.dirname(__file__), "..", "data", "dig_item.json")
 dig_data = json.load(open(dig_file, "r"))
 
 

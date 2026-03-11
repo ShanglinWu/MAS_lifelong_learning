@@ -647,7 +647,7 @@ class Evaluator:
         Normalises every environment's metrics to a 0-1 task_score and derives a
         boolean task_success flag using:
             * 1-5 scale  →  success when mean score >= 3  (i.e. task_score >= 0.25)
-            * 0-1 scale  →  success when score >= 0.65
+            * 0-1 scale  →  success when score >= 0.65 for coding, 0.80 for research, 0.50 for databse
 
         Args:
             env_name: The environment name / type string.
@@ -681,7 +681,7 @@ class Evaluator:
                 if vals:
                     raw_mean = sum(vals) / len(vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 3
+                    task_success = raw_mean >= 3.25
                 else:
                     task_score = 0.0
                     task_success = False
@@ -712,7 +712,7 @@ class Evaluator:
                         1 for rc in root_causes if rc.lower() in predicted
                     )
                     task_score = matches / len(root_causes) if root_causes else 0.0
-                    task_success = task_score >= 0.65
+                    task_success = task_score >= 0.50
                 else:
                     task_score = 0.0
                     task_success = False

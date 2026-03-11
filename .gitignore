@@ -219,3 +219,7 @@ marble/logs/
 marble/result/
 marble/memory_store/
 marble/workspace_*/
+
+marble/marble/logs/advice_log
+
+marble/marble/logs/advice_log

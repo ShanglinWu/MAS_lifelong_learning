@@ -71,7 +71,7 @@ def model_prompting(
     completion = litellm.completion(
         model=llm_model,
         messages=messages,
-        max_tokens=max_token_num,
+        # max_tokens=max_token_num,
         n=return_num,
         top_p=top_p,
         temperature=temperature,

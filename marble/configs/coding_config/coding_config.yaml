@@ -12,7 +12,7 @@ relationships:
   - [agent3, agent2, "collaborates with"]
   # - [agent3, agent4, "collaborates with"]
 
-llm: "bedrock/converse/qwen.qwen3-32b-v1:0"
+llm: "test-model"
 
 environment:
   type: Coding
@@ -24,16 +24,15 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a multi-agent system called 'CyberArena' that simulates a futuristic battle arena where multiple AI-controlled robots compete in team-based challenges. CyberArena is a dynamic action game that allows robots to collaborate, adapt to changing environments, and use a variety of weapons and abilities to outsmart and outmaneuver their opponents.
+    Please write a program called 'Team_Treasure_Hunt' that is a multiplayer action game where teams of players collaborate to navigate through a series of challenging environments, collect treasures, and solve puzzles to reach a final treasure chamber. Each team member has unique abilities that are essential for solving specific puzzles and overcoming obstacles. The game includes various environments such as forests, caves, and ancient ruins, each with its own set of challenges. The team that collects the most treasures and reaches the final chamber first wins the game.
     1. Implementation requirements:
-       - Implement a real-time combat system where robots can engage in battles using a variety of weapons, including ranged and melee attacks.
-       - Design a team-based objective system where robots must work together to complete tasks, such as capturing flags, defending bases, or escorting payloads, with dynamic roles and responsibilities.
-       - Incorporate an adaptive difficulty system that adjusts the AI behavior and challenge level based on the performance of the robots, ensuring a balanced and engaging experience.
-       - Create a feedback loop where robots can learn from previous battles, adapt their strategies, and improve their teamwork over time.
-       - Develop a visual and audio environment that enhances the immersive experience, including dynamic lighting, particle effects, and realistic sound effects.
-       - Ensure smooth and responsive controls for the robots, allowing for fluid movement and precise actions, and provide options for customizing control schemes.
-       - Include a variety of power-ups and environmental hazards that can be strategically used to gain advantages or create obstacles for opponents.
-       - Implement a scoring system that rewards effective teamwork, strategic play, and successful completion of objectives, with clear visual and audio feedback to players.
+       - Implement a game engine that supports multiplayer functionalities, allowing up to four players per team.
+       - Design different environments with varying levels of difficulty, including puzzles that require collaboration and the use of unique character abilities.
+       - Create a set of unique character abilities, such as strength (for moving heavy objects), agility (for navigating tight spaces), intelligence (for solving complex puzzles), and stealth (for avoiding traps).
+       - Develop a scoring system that rewards teams based on the number of treasures collected and the time taken to reach the final chamber.
+       - Provide comprehensive test specifications, including input scenarios such as different player actions, expected outputs like the game state changes, and edge cases such as players leaving the game or failing to solve puzzles.
+       - Ensure the game is robust and can handle unexpected inputs or behaviors from players, such as simultaneous actions or incorrect puzzle solutions.
+       - Test the game with different team compositions and strategies to ensure balanced and fair gameplay.
 
 
     2. Project structure:
@@ -100,8 +99,8 @@ memory:
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
 
 metrics:
-  # evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-  evaluate_llm: "gpt-4o-mini-2024-07-18"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true

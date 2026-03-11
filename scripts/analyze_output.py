@@ -71,7 +71,7 @@ def compute_ts(record: Dict[str, Any]) -> Optional[float]:
     if not isinstance(te, dict):
         return None
     keys = ["executability", "instruction_following", "consistency", "quality"]
-    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float))]
+    values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float)) and te[k] != 1]
     if not values:
         return None
     return (sum(values) / len(values)) * 20
@@ -89,22 +89,38 @@ def compute_cs(record: Dict[str, Any]) -> Optional[float]:
     planning = [v for v in record.get("planning_scores", []) if isinstance(v, (int, float))]
     communication = [v for v in record.get("communication_scores", []) if isinstance(v, (int, float))]
 
-    def _part_avg(values: List[float]) -> Optional[float]:
+    # def _part_avg(values: List[float]) -> Optional[float]:
+    #     if not values:
+    #         return None
+    #     valid = [v for v in values if v != -1]
+    #     if valid:
+    #         return sum(valid) / len(valid)
+    #     # Part exists and all are -1 -> treat as 0 by requirement.
+    #     return 0.0
+
+    # p_avg = _part_avg(planning)
+    # c_avg = _part_avg(communication)
+
+    # if p_avg is None and c_avg is None:
+    #     return None
+
+    def _clean_part(values: List[float]) -> Optional[float]:
         if not values:
             return None
         valid = [v for v in values if v != -1]
         if valid:
-            return sum(valid) / len(valid)
-        # Part exists and all are -1 -> treat as 0 by requirement.
-        return 0.0
-
-    p_avg = _part_avg(planning)
-    c_avg = _part_avg(communication)
-
-    parts = [v for v in [p_avg, c_avg] if v is not None]
-    if not parts:
+            return valid
         return None
-    return (sum(parts) / len(parts)) * 20
+
+    p_clean = _clean_part(planning)
+    c_clean = _clean_part(communication)
+
+    clean = p_clean + c_clean if p_clean and c_clean else (p_clean or c_clean or [])
+
+    if p_clean is None and c_clean is None:
+        return None
+
+    return (sum(clean) / len(clean)) * 20
 
 
 def compute_cs_details(record: Dict[str, Any]) -> Tuple[List[float], List[float], List[float], Optional[float]]:
