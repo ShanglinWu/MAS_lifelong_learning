@@ -11,7 +11,7 @@ class ShortTermMemory(BaseMemory):
     Short term memory class that automatically summarizes old information.
     """
 
-    def __init__(self, memory_limit: int = 10) -> None:
+    def __init__(self, memory_limit: int = 10, llm_model: str = "") -> None:
         """
         Initialize the memory module.
 
@@ -21,6 +21,7 @@ class ShortTermMemory(BaseMemory):
         super().__init__()
         self.memory_limit: int = memory_limit
         self.storage: List[Dict[str, Union[str, Message]]] = []
+        self.llm_model = llm_model
 
     def update(self, key: str, information: Dict[str, Any]) -> None:
         """
@@ -64,8 +65,11 @@ class ShortTermMemory(BaseMemory):
             prompt += f"{idx}. {str(information)}\n"
 
         summary = model_prompting(
-            llm_model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}],
+            llm_model=self.llm_model or "gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes memory content."},
+                {"role": "user", "content": prompt},
+            ],
             return_num=1,
             max_token_num=512,
             temperature=0.0,

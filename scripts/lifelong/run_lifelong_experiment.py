@@ -105,7 +105,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--amem_llm_backend",
-        choices=["openai", "ollama"],
+        choices=["openai", "ollama", "bedrock"],
         default="openai",
         help="A-MEM evolution backend.",
     )

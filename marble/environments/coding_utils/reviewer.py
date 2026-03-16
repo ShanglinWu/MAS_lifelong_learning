@@ -22,7 +22,7 @@ def log_debug_info(message: str, log_file: str = "marble/logs/advice_log"):
 
 
 def give_advice_and_revise_handler(
-    env, task_description: str, model_name: str
+    env, task_description: str, model_name: str = ""
 ) -> Dict[str, Any]:
     """
     Reads solution.py content, provides improvement suggestions based on task description, and revises the code accordingly.
@@ -37,6 +37,9 @@ def give_advice_and_revise_handler(
     """
     try:
         full_path = os.path.join(env.workspace_dir, "solution.py")
+        # Prefer the model stored on the environment (set from config.llm); fall
+        # back to the model_name arg only if the env attribute is missing/empty.
+        model_name = getattr(env, "llm_model", None) or model_name
 
         if not os.path.exists(full_path):
             return {
@@ -56,7 +59,12 @@ def give_advice_and_revise_handler(
                 "error-msg": "Solution file is empty or contains invalid code. Please use create_solution first to generate valid code",
             }
 
-        config_path = "marble/configs/coding_config/coding_config.yaml"
+        config_path = os.path.normpath(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "../../configs/coding_config/coding_config.yaml",
+            )
+        )
         if not os.path.exists(config_path):
             return {
                 "success": False,
@@ -103,7 +111,7 @@ def give_advice_and_revise_handler(
             ],
             return_num=1,
             max_token_num=4096,
-            temperature=0.0,
+            temperature=0.7,
         )[0]
 
         # Step 2: Generate modification strategy
@@ -143,7 +151,7 @@ def give_advice_and_revise_handler(
             ],
             return_num=1,
             max_token_num=4096,
-            temperature=0.0,
+            temperature=0.7,
         )[0]
 
         # 记录原始响应
@@ -268,11 +276,10 @@ def register_reviewer_actions(env):
                         },
                         "model_name": {
                             "type": "string",
-                            "description": "Name of the LLM model to use",
-                            "default": "gpt-3.5-turbo",
+                            "description": "Name of the LLM model to use (optional, defaults to the configured model)",
                         },
                     },
-                    "required": ["task_description", "model_name"],
+                    "required": ["task_description"],
                     "additionalProperties": False,
                 },
             },

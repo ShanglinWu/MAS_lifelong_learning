@@ -24,6 +24,7 @@ class CodingEnvironment(BaseEnvironment):
         self.config = config
 
         self.workspace_dir = config.get("workspace_dir", "workspace")
+        self.llm_model: str = config.get("llm", "")
         os.makedirs(self.workspace_dir, exist_ok=True)
 
         self.register_standard_actions()

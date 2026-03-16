@@ -81,49 +81,18 @@ class DBEnvironment(BaseEnvironment):
         print(self.get_slow_query_handler())
 
     def start_docker_containers(self):
-        if os.environ.get("MARBLE_DB_SKIP_DOCKER_SETUP", "").strip() in {
-            "1",
-            "true",
-            "TRUE",
-            "yes",
-            "YES",
-        }:
-            print("Skipping Docker setup (MARBLE_DB_SKIP_DOCKER_SETUP enabled).")
-            return
         print("Starting Docker containers...")
-        workdir = os.path.join(self.current_dir, "db_env_docker")
-        compose_cmd = os.environ.get("MARBLE_DOCKER_COMPOSE_CMD", "").strip()
-        if compose_cmd:
-            cmd = compose_cmd.split()
-        else:
-            cmd = ["docker", "compose"]
-
-        def _run_compose(args: List[str]) -> None:
-            subprocess.run(
-                cmd + args,
-                cwd=workdir,
-                shell=False,
-                check=True,
-            )
-
-        try:
-            _run_compose(["down", "-v"])
-            _run_compose(["up", "-d", "--remove-orphans"])
-        except subprocess.CalledProcessError:
-            # Fallback for environments where docker requires sudo.
-            cmd_sudo = ["sudo"] + cmd
-            subprocess.run(
-                cmd_sudo + ["down", "-v"],
-                cwd=workdir,
-                shell=False,
-                check=True,
-            )
-            subprocess.run(
-                cmd_sudo + ["up", "-d", "--remove-orphans"],
-                cwd=workdir,
-                shell=False,
-                check=True,
-            )
+        subprocess.run(
+            ["sudo", "docker", "compose", "down", "-v"],
+            cwd=os.path.join(self.current_dir, "db_env_docker"),
+            shell=False,
+            check=True,
+        )
+        subprocess.run(
+            ["sudo", "docker", "compose", "up", "-d", "--remove-orphans"],
+            cwd=os.path.join(self.current_dir, "db_env_docker"),
+            check=True,
+        )
 
     def initialize_database(self, config: Dict[str, Any]):
         while not self.check_db_connection():

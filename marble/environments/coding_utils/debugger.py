@@ -10,6 +10,7 @@ from marble.llms.model_prompting import model_prompting
 def extract_python_code(content: str) -> str:
     """
     Extracts Python code from a string that may contain Markdown-style code blocks.
+    Handles truncated responses where the closing ``` may be missing.
 
     Args:
         content (str): The input content containing Python code wrapped in Markdown.
@@ -20,10 +21,14 @@ def extract_python_code(content: str) -> str:
     start_marker = "```python"
     end_marker = "```"
     start_idx = content.find(start_marker)
-    end_idx = content.find(end_marker, start_idx + len(start_marker))
 
-    if start_idx != -1 and end_idx != -1:
-        return content[start_idx + len(start_marker) : end_idx].strip()
+    if start_idx != -1:
+        code_start = start_idx + len(start_marker)
+        end_idx = content.find(end_marker, code_start)
+        if end_idx != -1:
+            return content[code_start:end_idx].strip()
+        # Truncated response — no closing fence
+        return content[code_start:].strip()
     return content
 
 
@@ -104,7 +109,7 @@ def run_and_debug_solution_handler(
                 ],
                 return_num=1,
                 max_token_num=2048,
-                temperature=0.0,
+                temperature=0.7,
             )[0]
 
             suggestions = suggestions_response.content
@@ -126,7 +131,7 @@ def run_and_debug_solution_handler(
                 ],
                 return_num=1,
                 max_token_num=2048,
-                temperature=0.0,
+                temperature=0.7,
             )[0]
 
             fixed_code = fix_response.content

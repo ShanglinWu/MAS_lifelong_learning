@@ -78,7 +78,7 @@ class EnginePlanner:
         memory: Any,
         config: Dict[str, Any],
         task: str,
-        model: str = "gpt-3.5-turbo",
+        model: str = "",
     ):
         """
         Initialize the EnginePlanner.
@@ -88,7 +88,7 @@ class EnginePlanner:
             memory (Any): Shared memory instance (an instance of SharedMemory).
             config (Dict[str, Any]): Configuration parameters.
             task (str): The overall task description.
-            model (str, optional): The LLM model to use. Defaults to "gpt-3.5-turbo".
+            model (str, optional): The LLM model to use. Defaults to config.llm.
         """
         self.agent_graph = agent_graph
         self.memory = memory  # Expected to be an instance of SharedMemory.
@@ -118,6 +118,15 @@ class EnginePlanner:
             prompt += f"- Agent ID: {agent_id}\n"
             prompt += f"  Relationships: {profile['relationships']}\n"
             prompt += f"  Profile: {profile['profile']}\n"
+
+        # Include transactive memory for better task allocation (if available)
+        if hasattr(self.memory, 'get_transactive_str'):
+            transactive_info = self.memory.get_transactive_str()
+            if transactive_info:
+                prompt += (
+                    f"\nTeam Memory (Historical Performance & Capabilities):\n"
+                    f"{transactive_info}\n"
+                )
 
         # (The final JSON output instructions will be appended in each planning method.)
         return prompt
@@ -428,7 +437,7 @@ class EnginePlanner:
             ],
             return_num=1,
             max_token_num=2048,
-            temperature=0.0,
+            temperature=0.7,
             top_p=None,
             stream=None,
         )[0]
@@ -474,14 +483,17 @@ class EnginePlanner:
             "}"
         )
 
-        messages = [{"role": "system", "content": prompt}]
+        messages = [
+            {"role": "system", "content": "You are a task continuation decision maker."},
+            {"role": "user", "content": prompt},
+        ]
         response = model_prompting(
             llm_model=self.model,
             messages=messages,
             return_num=1,
             max_token_num=256,
-            temperature=0.3,
-            top_p=1.0,
+            temperature=0.7,
+            top_p=None,
         )
         messages_for_token = messages + [
             {"role": "assistant", "content": response[0].content}

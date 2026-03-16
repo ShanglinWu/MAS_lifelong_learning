@@ -15,12 +15,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 from colorama import Fore, Style, init
 
 from marble.agent.werewolf_agent import WerewolfAgent
-from marble.memory.llma_mem import (
-    LLMAMemManager,
-    MemoryTopology,
-    MemoryTopologyManager,
-    WerewolfMemoryAdapter,
-)
 from marble.utils.eventbus import EventBus
 
 
@@ -203,25 +197,6 @@ class WerewolfEnv:
         # Write the shared memory to a JSON file
         with open(self.shared_memory_path, "w", encoding="utf-8") as f:
             json.dump(self.shared_memory, f, indent=4)
-
-        # Initialize LLMA-Mem if configured
-        llma_config = self.config.get("llma_mem", {})
-        if llma_config.get("enabled", False):
-            topology_str = llma_config.get("topology", "hybrid")
-            topology = MemoryTopology(topology_str)
-            topo_manager = MemoryTopologyManager(topology)
-
-            for agent in self.agents:
-                manager = LLMAMemManager(
-                    agent_id=agent.agent_id,
-                    topology_manager=topo_manager,
-                    consolidation_interval=llma_config.get("consolidation_interval", 10),
-                    enable_auto_embedding=llma_config.get("auto_embedding", True),
-                    embedding_model=llma_config.get(
-                        "embedding_model", "amazon.titan-embed-text-v2:0"
-                    ),
-                )
-                agent.llma_mem_adapter = WerewolfMemoryAdapter(manager)
 
         # Print initialization log
         self._log_system(

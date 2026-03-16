@@ -12,26 +12,28 @@ relationships:
   - [agent3, agent2, "collaborates with"]
   # - [agent3, agent4, "collaborates with"]
 
-llm: "gpt-4o-mini"
+llm: "bedrock/converse/qwen.qwen3-32b-v1:0"
 
 environment:
   type: Coding
   name: "Coding Environment"
   workspace_dir: "workspace"
-  max_iterations: 5
+  max_iterations: 3
 
 task:
   content: |-
     Software Development Task:
 
-    Please write a program called VideoCollaborationSuite. VideoCollaborationSuite is a collaborative video editing application that allows multiple users to work together on a video project in real-time. It provides tools for trimming, synchronizing subtitles, and adjusting playback speed, and supports real-time communication and feedback among team members.
+    Please write a multi-agent system called 'CyberArena' that simulates a futuristic battle arena where multiple AI-controlled robots compete in team-based challenges. CyberArena is a dynamic action game that allows robots to collaborate, adapt to changing environments, and use a variety of weapons and abilities to outsmart and outmaneuver their opponents.
     1. Implementation requirements:
-       - The application must support multiple users editing a video simultaneously, with real-time updates and synchronization of changes.
-       - It should include a feature for automatic subtitle synchronization, allowing users to upload a video and subtitle file, and automatically align the subtitles with the video content. Users should be able to manually adjust the synchronization if needed.
-       - The application must provide a playback speed adjustment tool, allowing users to change the speed of the video playback for precise editing and review.
-       - The system should include a chat feature for real-time communication among users, enabling them to discuss and coordinate their editing activities.
-       - The application should support version control, allowing users to save different versions of the video and revert to previous states if necessary.
-       - The system should dynamically adapt to user feedback, such as suggestions for subtitle adjustments or playback speed changes, and allow for seamless collaboration and iterative improvements.
+       - Implement a real-time combat system where robots can engage in battles using a variety of weapons, including ranged and melee attacks.
+       - Design a team-based objective system where robots must work together to complete tasks, such as capturing flags, defending bases, or escorting payloads, with dynamic roles and responsibilities.
+       - Incorporate an adaptive difficulty system that adjusts the AI behavior and challenge level based on the performance of the robots, ensuring a balanced and engaging experience.
+       - Create a feedback loop where robots can learn from previous battles, adapt their strategies, and improve their teamwork over time.
+       - Develop a visual and audio environment that enhances the immersive experience, including dynamic lighting, particle effects, and realistic sound effects.
+       - Ensure smooth and responsive controls for the robots, allowing for fluid movement and precise actions, and provide options for customizing control schemes.
+       - Include a variety of power-ups and environmental hazards that can be strategically used to gain advantages or create obstacles for opponents.
+       - Implement a scoring system that rewards effective teamwork, strategic play, and successful completion of objectives, with clear visual and audio feedback to players.
 
 
     2. Project structure:
@@ -66,8 +68,8 @@ agents:
     profile: |
       I am a Senior Software Developer specialized in Python development.
       I am good at creating the code framework from scratch based on the task description and requirements.
-      So I **have to** call "create_code" action to create the code in the first iteration at first.
-      I am **very terrible** at do further modifications since I am not so creative or careful so I **have to** let agent 2 or agent 3 revise the code after I create the code and I **can't** call "give_advice_and_revise_code" action.
+      So I **have to** call "create_solution" action to create the code in the first iteration at first.
+      I am **very terrible** at do further modifications since I am not so creative or careful so I **have to** let agent 2 or agent 3 revise the code after I create the code and I **can't** call "give_advice_and_revise" action.
       Agent 2 is better at adding missing functions so it's better to let agent 2 revise the code at first.
       Agent 3 is better at fixing existing issues and optimizing the code so it's better to let agent 3 revise the code after agent 2 has revised the code so that the code is more optimized.
 
@@ -77,8 +79,8 @@ agents:
     profile: |
       I am a Senior Software Developer specialized in Python development.
       I am better at adding missing functionality based on my decent understanding and compliance to the task description and requirements.
-      I **have to** call "give_advice_and_revise_code" action to give advice to the code and revise the code.
-      I **can't** call "create_code" action since I am not good at creating the code framework from scratch.
+      I **have to** call "give_advice_and_revise" action to give advice to the code and revise the code.
+      I **can't** call "create_solution" action since I am not good at creating the code framework from scratch.
       I can let agent 3 to make the code more optimized after I have added the missing functionality.
 
   - type: BaseAgent
@@ -86,14 +88,18 @@ agents:
     profile: |
       I am a Senior Software Developer specialized in Python development.
       I am better at fixing existing issues and optimizing the code based on my innovation and creativity.
-      I **have to** call "give_advice_and_revise_code" action to give advice to the code and revise the code.
-      I **can't** call "create_code" action since I am not good at creating the code framework from scratch.
+      I **have to** call "give_advice_and_revise" action to give advice to the code and revise the code.
+      I **can't** call "create_solution" action since I am not good at creating the code framework from scratch.
       I can let agent 2 to add the missing functionality after I have fixed the existing issues and optimized the code.
 
 memory:
-  type: SharedMemory
+  type: LLMAMem
+  topology: shared    # or "shared" or "hybrid"
+  persist_dir: memory_store
+  consolidation_interval: 3
+  # SharedMemory, BaseMemory, NoMemory, LLMAMem
   amem:
-    enabled: false
+    enabled: True
     topology: local
     evolution_enabled: true
     evolution_threshold: 100
@@ -103,7 +109,8 @@ memory:
     retrieval_k: 5
 
 metrics:
-  evaluate_llm: "gpt-4o"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true
@@ -113,4 +120,4 @@ engine_planner:
 
 output:
   format: jsonl
-  file_path: "result/development_output.jsonl"
+  file_path: "result/llmamem/development_output_qwen32b.jsonl"

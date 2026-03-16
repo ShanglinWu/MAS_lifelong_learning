@@ -2,12 +2,12 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import yaml
+from openai import OpenAI
 
-from marble.llms.model_prompting import model_prompting
-from marble.utils.eventbus import EventBus
+from marble.utils.eventbus import EventBus  # 假设 BaseAgent 在 base_agent_module 中
 
 
 class WerewolfAgent:
@@ -44,18 +44,24 @@ class WerewolfAgent:
         config_key = "villager_config" if is_villager else "werewolf_config"
         model_config = config.get(config_key, {})
         self.config = config
-        # Get model name (used by Bedrock via model_prompting)
-        self.model_name = model_config.get(
-            "model_name", "google.gemma-3-4b-it"
-        )
+        # Get and save API configuration details as attributes
+        self.base_url = model_config.get(
+            "base_url", "https://api.openai.com/v1"
+        )  # Default to OpenAI API
+        self.api_key = model_config.get(
+            "api_key", config.get("openai_api_key")
+        )  # Default to using general OpenAI API key
+        self.model_name = model_config.get("model_name", "gpt-4o")  # Default to GPT-4
         self.strategy = strategy
+        # Initialize the API client
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+        )
 
         self.agent_id = config.get("agent_id")
         self.id = self.agent_id
         assert isinstance(self.agent_id, str), "agent_id must be a string"
-
-        # LLMA-Mem adapter (set externally by WerewolfEnv)
-        self.llma_mem_adapter = None
 
         self.role = role  # Set the role
         self.agent_number = number
@@ -78,7 +84,7 @@ class WerewolfAgent:
         # Print to terminal and write to log file
         init_message = (
             f"{self.role} agent '{self.agent_id}' initialized with role '{self.role}', "
-            f"using model '{self.model_name}' via Bedrock"
+            f"using model '{self.model_name}', base URL '{self.base_url}'"
         )
         self._log_and_save(init_message)
 
@@ -333,7 +339,7 @@ class WerewolfAgent:
 
     def gpt_tool_call(self, messages, tools):
         """
-        Calls the LLM via Bedrock (through model_prompting) with tool definitions.
+        Calls the GPT model using the specified messages and tools.
 
         Args:
             messages (list): A list of message dictionaries to send to the model.
@@ -346,19 +352,16 @@ class WerewolfAgent:
         while True:
             rounds += 1
             try:
-                result = model_prompting(
-                    llm_model=self.model_name,
+                response = self.client.chat.completions.create(
+                    model=self.model_name,  # Use self.model_name instead of hardcoded model name
                     messages=messages,
-                    return_num=1,
-                    max_token_num=512,
-                    temperature=0.7,
                     tools=tools,
                     tool_choice="required",
+                    temperature=0.7,  # Set temperature to 0.7 for more diverse results
+                    n=1,
                 )
-                msg = result[0]
-                if msg.tool_calls:
-                    return msg.tool_calls
-                raise Exception("No tool calls in response")
+                tool_calls = response.choices[0].message.tool_calls
+                return tool_calls
             except Exception as e:
                 print(f"Chat Generation Error: {e}")
                 time.sleep(5)
@@ -377,8 +380,8 @@ class WerewolfAgent:
 
         # Step 2: Define YAML template path
         yaml_paths = {
-            "werewolf_action": "marble/agent/werewolf_prompts/werewolf_action.yaml",
-            "werewolf_discussion": "marble/agent/werewolf_prompts/werewolf_discussion.yaml",
+            "werewolf_action": r"marble\agent\werewolf_prompts\werewolf_action.yaml",
+            "werewolf_discussion": r"marble\agent\werewolf_prompts\werewolf_discussion.yaml",
         }
         yaml_path = yaml_paths.get(event_type, None)
         if not yaml_path:
@@ -467,15 +470,6 @@ class WerewolfAgent:
                 "<<rounds_remaining>>", str(rounds_remaining)
             )
 
-        # Step 5.5: Inject LLMA-Mem strategic context if available
-        if self.llma_mem_adapter is not None:
-            alive_players = game_state.get("alive_players", [])
-            strategic_ctx = self.llma_mem_adapter.get_strategic_context(
-                situation=event_type, alive_players=alive_players
-            )
-            if strategic_ctx:
-                filled_prompt += f"\n\n{strategic_ctx}"
-
         # Step 6: Prepare the message content to pass to the tool
         messages = [
             {"role": "system", "content": action_template.get("system", "")},
@@ -487,13 +481,6 @@ class WerewolfAgent:
             tool_calls = json.loads(
                 self.gpt_tool_call(messages, tools)[0].function.arguments
             )
-            # Record action to LLMA-Mem
-            if self.llma_mem_adapter is not None:
-                self.llma_mem_adapter.record_game_action(
-                    event_type=event_type,
-                    result=tool_calls,
-                    game_state=game_state,
-                )
             return tool_calls
         except Exception as e:
             self.logger.error(f"Error during {event_type}'s tool call: {e}")
@@ -516,17 +503,17 @@ class WerewolfAgent:
 
         # Step 2: Define YAML path based on the action type
         yaml_paths = {
-            "witch_action": "marble/agent/werewolf_prompts/witch_prompt.yaml",
-            "guard_action": "marble/agent/werewolf_prompts/guard_prompt.yaml",
-            "run_for_sheriff": "marble/agent/werewolf_prompts/run_for_sheriff.yaml",
-            "sheriff_speech": "marble/agent/werewolf_prompts/sheriff_speech.yaml",
-            "vote_for_sheriff": "marble/agent/werewolf_prompts/vote_for_sheriff.yaml",
-            "decide_speech_sequence": "marble/agent/werewolf_prompts/decide_speech_sequence.yaml",
-            "seer_action": "marble/agent/werewolf_prompts/seer_prompt.yaml",
-            "player_speech": "marble/agent/werewolf_prompts/speech_prompt.yaml",
-            "vote_action": "marble/agent/werewolf_prompts/vote_prompt.yaml",
-            "last_words": "marble/agent/werewolf_prompts/last_word_prompt.yaml",
-            "badge_flow": "marble/agent/werewolf_prompts/badge_flow.yaml",
+            "witch_action": r"marble\agent\werewolf_prompts\witch_prompt.yaml",
+            "guard_action": r"marble\agent\werewolf_prompts\guard_prompt.yaml",
+            "run_for_sheriff": r"marble\agent\werewolf_prompts\run_for_sheriff.yaml",
+            "sheriff_speech": r"marble\agent\werewolf_prompts\sheriff_speech.yaml",
+            "vote_for_sheriff": r"marble\agent\werewolf_prompts\vote_for_sheriff.yaml",
+            "decide_speech_sequence": r"marble\agent\werewolf_prompts\decide_speech_sequence.yaml",
+            "seer_action": r"marble\agent\werewolf_prompts\seer_prompt.yaml",
+            "player_speech": r"marble\agent\werewolf_prompts\speech_prompt.yaml",
+            "vote_action": r"marble\agent\werewolf_prompts\vote_prompt.yaml",
+            "last_words": r"marble\agent\werewolf_prompts\last_word_prompt.yaml",
+            "badge_flow": r"marble\agent\werewolf_prompts\badge_flow.yaml",
         }
         yaml_path = yaml_paths.get(event_type, None)
 
@@ -831,15 +818,6 @@ class WerewolfAgent:
                     "Make decisions based on your own judgment, with less reliance "
                     "on others' input."
                 )
-        # Inject LLMA-Mem strategic context if available
-        if self.llma_mem_adapter is not None:
-            alive_players = game_state.get("alive_players", [])
-            strategic_ctx = self.llma_mem_adapter.get_strategic_context(
-                situation=event_type, alive_players=alive_players
-            )
-            if strategic_ctx:
-                filled_prompt += f"\n\n{strategic_ctx}"
-
         messages = [
             {"role": "system", "content": action_template.get("system", "")},
             {"role": "user", "content": filled_prompt},
@@ -850,13 +828,6 @@ class WerewolfAgent:
             tool_calls = json.loads(
                 self.gpt_tool_call(messages, tools)[0].function.arguments
             )
-            # Record action to LLMA-Mem
-            if self.llma_mem_adapter is not None:
-                self.llma_mem_adapter.record_game_action(
-                    event_type=event_type,
-                    result=tool_calls,
-                    game_state=game_state,
-                )
             return tool_calls
         except Exception as e:
             self.logger.error(f"Error during {event_type}'s tool call: {e}")
