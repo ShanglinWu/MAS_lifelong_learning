@@ -27,7 +27,7 @@ def split_sql_statements(sql: str) -> List[str]:
 def get_prometheus_metric_data(
     metric_name: str, start_time: float, end_time: float, step: int = 1
 ) -> List[List[Any]]:
-    prom_url = "http://localhost:9090/api/v1/query_range"
+    prom_url = f"http://localhost:{os.getenv('DB_PROMETHEUS_PORT', '9090')}/api/v1/query_range"
     params = {
         "query": metric_name,
         "start": start_time,
@@ -67,6 +67,14 @@ class DBEnvironment(BaseEnvironment):
         super().__init__(name, config)
         self.kb = DiagnosticKB()
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.db_name = os.getenv("DB_NAME", "sysbench")
+        self.db_host = os.getenv("DB_HOST", "localhost")
+        self.db_port = os.getenv("DB_POSTGRES_PORT", "5432")
+        self.prometheus_port = os.getenv("DB_PROMETHEUS_PORT", "9090")
+        self.compose_project_name = os.getenv("DB_COMPOSE_PROJECT_NAME")
+        self.process_env = os.environ.copy()
+        if self.compose_project_name:
+            self.process_env["COMPOSE_PROJECT_NAME"] = self.compose_project_name
         self.start_docker_containers()
         self.initialize_database(config)
         self.register_actions()
@@ -83,15 +91,17 @@ class DBEnvironment(BaseEnvironment):
     def start_docker_containers(self):
         print("Starting Docker containers...")
         subprocess.run(
-            ["sudo", "docker", "compose", "down", "-v"],
+            ["sudo", "-E", "docker", "compose", "down", "-v"],
             cwd=os.path.join(self.current_dir, "db_env_docker"),
             shell=False,
             check=True,
+            env=self.process_env,
         )
         subprocess.run(
-            ["sudo", "docker", "compose", "up", "-d", "--remove-orphans"],
+            ["sudo", "-E", "docker", "compose", "up", "-d", "--remove-orphans"],
             cwd=os.path.join(self.current_dir, "db_env_docker"),
             check=True,
+            env=self.process_env,
         )
 
     def initialize_database(self, config: Dict[str, Any]):
@@ -104,9 +114,9 @@ class DBEnvironment(BaseEnvironment):
         connection = psycopg2.connect(
             user="test",
             password="Test123_456",
-            database="sysbench",
-            host="localhost",
-            port="5432",
+            database=self.db_name,
+            host=self.db_host,
+            port=self.db_port,
         )
         cursor = connection.cursor()
         connection.autocommit = True
@@ -164,6 +174,7 @@ class DBEnvironment(BaseEnvironment):
                         self.current_dir, "db_env_docker", "anomaly_trigger"
                     ),
                     check=True,
+                    env=self.process_env,
                 )
         else:
             print(
@@ -518,9 +529,9 @@ class DBEnvironment(BaseEnvironment):
             connection = psycopg2.connect(
                 user="test",
                 password="Test123_456",
-                database="sysbench",
-                host="localhost",
-                port="5432",
+                database=self.db_name,
+                host=self.db_host,
+                port=self.db_port,
             )
             cursor = connection.cursor()
             sql_queries = split_sql_statements(sql)
@@ -616,6 +627,7 @@ class DBEnvironment(BaseEnvironment):
 
     def get_raw_alerts(self) -> dict:
         prom_url = "http://localhost:9090/api/v1/alerts"
+        prom_url = f"http://localhost:{self.prometheus_port}/api/v1/alerts"
         response = requests.get(prom_url)
         if response.status_code == 200:
             data = response.json()
@@ -635,9 +647,9 @@ class DBEnvironment(BaseEnvironment):
             connection = psycopg2.connect(
                 user="test",
                 password="Test123_456",
-                database="sysbench",
-                host="localhost",
-                port="5432",
+                database=self.db_name,
+                host=self.db_host,
+                port=self.db_port,
             )
             print("Database is up!")
             connection.close()
@@ -648,9 +660,10 @@ class DBEnvironment(BaseEnvironment):
 
     def terminate(self) -> None:
         subprocess.run(
-            ["sudo", "docker", "compose", "down"],
+            ["sudo", "-E", "docker", "compose", "down"],
             cwd=os.path.join(self.current_dir, "db_env_docker"),
             check=True,
+            env=self.process_env,
         )
 
 

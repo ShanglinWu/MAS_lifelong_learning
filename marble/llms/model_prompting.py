@@ -19,7 +19,6 @@ _token_counter: Dict[str, int] = {
     "total_tokens": 0,
 }
 
-
 def get_token_usage() -> Dict[str, int]:
     """Return a copy of the accumulated token usage across all model_prompting calls."""
     with _token_lock:

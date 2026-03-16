@@ -214,6 +214,7 @@ backup/
 .checkpoints/
 text.ipynb
 test.log
+test.tex
 marble/marble/logs/
 marble/logs/
 marble/result/

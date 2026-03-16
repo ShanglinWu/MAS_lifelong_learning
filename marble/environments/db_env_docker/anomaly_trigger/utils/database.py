@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import random
 import time
 from enum import IntEnum
@@ -9,11 +10,11 @@ import psycopg2
 import pymysql
 
 DB_CONFIG = {
-    "dbname": "sysbench",  # 连接到默认的 "postgres" 数据库
-    "user": "test",  # 替换为你的数据库用户名
-    "password": "Test123_456",  # 替换为你的数据库密码
-    "host": "localhost",  # 替换为你的数据库主机地址
-    "port": 5432,
+    "dbname": os.getenv("DB_NAME", "sysbench"),
+    "user": os.getenv("DB_USER", "test"),
+    "password": os.getenv("DB_PASSWORD", "Test123_456"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_POSTGRES_PORT", "5432")),
     # "dbtype": "postgresql"
 }
 

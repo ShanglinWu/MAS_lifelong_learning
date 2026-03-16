@@ -546,11 +546,31 @@ class Engine:
             team_ids = [agent.agent_id for agent in self.agents]
             for agent in self.agents:
                 if hasattr(agent.memory, 'update_after_task'):
+                    agent_task_parts = []
+                    if isinstance(self.environment, DBEnvironment):
+                        for it_data in summary_data.get("iterations", []):
+                            it_num = it_data.get("iteration", "?")
+                            for res in it_data.get("task_results", []):
+                                if agent.agent_id in res:
+                                    snippet = str(res[agent.agent_id])[:500]
+                                    agent_task_parts.append(
+                                        f"[Iter {it_num}] {agent.agent_id}: {snippet}"
+                                    )
+                            it_summary = it_data.get("summary", "")
+                            if it_summary:
+                                agent_task_parts.append(
+                                    f"[Iter {it_num}] Planner summary: {str(it_summary)[:300]}"
+                                )
+                    agent_context = (
+                        "\n".join(agent_task_parts)
+                        if agent_task_parts
+                        else task_context
+                    )
                     agent.memory.update_after_task(
                         task_description=self.task,
                         team_composition=team_ids,
                         outcome=task_outcome,
-                        context=task_context,
+                        context=agent_context,
                         task_type=self.environment.name,
                     )
 

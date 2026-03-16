@@ -14,6 +14,7 @@ Schema per spec:
 
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
@@ -38,6 +39,13 @@ class ProceduralMemory:
 
     EMBEDDING_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
     EPSILON: float = 1e-6  # Small constant to prevent division by zero
+    KNOWN_DB_ANOMALIES = (
+        "INSERT_LARGE_DATA",
+        "LOCK_CONTENTION",
+        "VACUUM",
+        "REDUNDANT_INDEX",
+        "FETCH_LARGE_DATA",
+    )
 
     def __init__(self, agent_id: str, persist_dir: str = "memory_store") -> None:
         """
@@ -90,6 +98,8 @@ class ProceduralMemory:
         source_episodes: List[int],
         success_count: int = 0,
         failure_count: int = 0,
+        role_scope: str = "",
+        anomaly_scope: str = "",
     ) -> Dict[str, Any]:
         """
         Add a new procedure to procedural memory.
@@ -119,6 +129,8 @@ class ProceduralMemory:
             "avg_performance_gain": 0.0,
             "source_episodes": source_episodes,
             "viewed_times": 0,
+            "role_scope": role_scope,
+            "anomaly_scope": anomaly_scope,
         }
         self.procedures.append(procedure)
 
@@ -162,6 +174,9 @@ class ProceduralMemory:
         query: str,
         top_k: int = 3,
         current_time: Optional[int] = None,
+        min_relevance: Optional[float] = None,
+        min_success_rate: Optional[float] = None,
+        required_role_scope: Optional[str] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         """
         Retrieve the most relevant procedures using:
@@ -174,6 +189,9 @@ class ProceduralMemory:
             query: The query string (current task description).
             top_k: Number of top procedures to retrieve.
             current_time: Current sequential timestamp.
+            min_relevance: Optional minimum cosine similarity threshold.
+            min_success_rate: Optional minimum success rate threshold.
+            required_role_scope: Optional required anomaly/role scope.
 
         Returns:
             Top-k procedures sorted by score, or None if empty.
@@ -187,6 +205,10 @@ class ProceduralMemory:
 
         scored_procedures: List[tuple] = []
         for i, proc in enumerate(self.procedures):
+            proc_scope = self._get_procedure_scope(proc)
+            if required_role_scope and proc_scope != required_role_scope:
+                continue
+
             # relevance(m, q) = cosine_similarity(embed(title+content), embed(query))
             proc_emb = np.array(self.embeddings[i]).reshape(1, -1)
             relevance = float(
@@ -195,6 +217,11 @@ class ProceduralMemory:
 
             # importance(p_j) = ρ_j (purely success rate)
             importance = proc["success_rate"]
+
+            if min_relevance is not None and relevance < min_relevance:
+                continue
+            if min_success_rate is not None and importance < min_success_rate:
+                continue
 
             # Requested scoring: no recency, no weighting
             score = relevance + importance
@@ -210,6 +237,18 @@ class ProceduralMemory:
         self._save()
 
         return results if results else None
+
+    def _get_procedure_scope(self, proc: Dict[str, Any]) -> str:
+        for key in ("role_scope", "anomaly_scope"):
+            value = proc.get(key, "")
+            if isinstance(value, str) and value:
+                return value
+
+        haystack = f"{proc.get('title', '')} {proc.get('knowledge_content', '')}"
+        for anomaly in self.KNOWN_DB_ANOMALIES:
+            if re.search(rf"\b{re.escape(anomaly)}\b", haystack):
+                return anomaly
+        return ""
 
     def is_empty(self) -> bool:
         """Check if procedural memory has no procedures."""

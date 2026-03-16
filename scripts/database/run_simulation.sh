@@ -44,6 +44,71 @@ memory_type_for_worker() {
     esac
 }
 
+worker_db_suffix() {
+    local worker="$1"
+    case "${worker}" in
+        nomem) echo "nomem" ;;
+        sharedmem) echo "sharedmem" ;;
+        llmamem) echo "llmamem" ;;
+        *)
+            echo "Unknown worker: ${worker}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+worker_postgres_port() {
+    local worker="$1"
+    case "${worker}" in
+        nomem) echo "5432" ;;
+        sharedmem) echo "55432" ;;
+        llmamem) echo "56432" ;;
+        *)
+            echo "Unknown worker: ${worker}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+worker_prometheus_port() {
+    local worker="$1"
+    case "${worker}" in
+        nomem) echo "9090" ;;
+        sharedmem) echo "19090" ;;
+        llmamem) echo "29090" ;;
+        *)
+            echo "Unknown worker: ${worker}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+worker_node_exporter_port() {
+    local worker="$1"
+    case "${worker}" in
+        nomem) echo "9100" ;;
+        sharedmem) echo "19100" ;;
+        llmamem) echo "29100" ;;
+        *)
+            echo "Unknown worker: ${worker}" >&2
+            exit 1
+            ;;
+    esac
+}
+
+worker_pg_exporter_port() {
+    local worker="$1"
+    case "${worker}" in
+        nomem) echo "9187" ;;
+        sharedmem) echo "19187" ;;
+        llmamem) echo "29187" ;;
+        *)
+            echo "Unknown worker: ${worker}" >&2
+            exit 1
+            ;;
+    esac
+}
+
 load_env_file() {
     if [[ ! -f "${ENV_FILE}" ]]; then
         echo "Missing env file: ${ENV_FILE}" >&2
@@ -169,23 +234,42 @@ run_worker() {
         return 1
     fi
 
+    if (( max_parallelism != 1 )); then
+        echo "Database environment only supports task parallelism of 1 per worker because each case restarts its worker-specific DB stack." >&2
+        return 1
+    fi
+
     run_single_case() {
         local base_config="$1"
         local failed=0
         local base_name case_name config_name
         local worker_config_dir worker_config_abs worker_config_rel
         local output_rel output_abs persist_rel persist_abs
+        local db_suffix db_name compose_project_name postgres_port prometheus_port
+        local node_exporter_port pg_exporter_port table_name
 
         base_name="$(basename "${base_config}")"
         case_name="${base_name%.yaml}"
         config_name="${case_name}_${safe_model_name}_${worker}.yaml"
+        db_suffix="$(worker_db_suffix "${worker}")"
+        db_name="sysbench_${db_suffix}"
+        compose_project_name="marble_db_${db_suffix}"
+        postgres_port="$(worker_postgres_port "${worker}")"
+        prometheus_port="$(worker_prometheus_port "${worker}")"
+        node_exporter_port="$(worker_node_exporter_port "${worker}")"
+        pg_exporter_port="$(worker_pg_exporter_port "${worker}")"
+        table_name="$(printf '%s' "${case_name}_${worker}" | tr -c '[:alnum:]_' '_' | tr '[:upper:]' '[:lower:]' | cut -c1-55)"
 
         worker_config_dir="${GENERATED_CONFIG_DIR}/${safe_model_name}/${worker}"
         worker_config_abs="${worker_config_dir}/${config_name}"
         worker_config_rel="./configs/test_config_database_generated/${safe_model_name}/${worker}/${config_name}"
         output_rel="result/database/${safe_model_name}/${worker}/${case_name}.json"
         output_abs="${ROOT_DIR}/marble/${output_rel}"
-        persist_rel="memory_store/database/${safe_model_name}/${worker}/${case_name}"
+        if [[ "${worker}" == "llmamem" ]]; then
+            persist_rel="memory_store/database/${safe_model_name}/${worker}"
+        else
+            persist_rel="memory_store/database/${safe_model_name}/${worker}/${case_name}"
+        fi
         persist_abs="${ROOT_DIR}/marble/${persist_rel}"
 
         mkdir -p "${worker_config_dir}" "$(dirname "${output_abs}")" "${persist_abs}"
@@ -199,6 +283,17 @@ run_worker() {
         echo "[${worker}] Running ${case_name}..."
         if ! (
             cd "${ROOT_DIR}/marble"
+            DB_NAME="${db_name}" \
+            DB_HOST="localhost" \
+            DB_USER="test" \
+            DB_PASSWORD="Test123_456" \
+            DB_POSTGRES_PORT="${postgres_port}" \
+            DB_PROMETHEUS_PORT="${prometheus_port}" \
+            DB_NODE_EXPORTER_PORT="${node_exporter_port}" \
+            DB_PG_EXPORTER_PORT="${pg_exporter_port}" \
+            DB_COMPOSE_PROJECT_NAME="${compose_project_name}" \
+            COMPOSE_PROJECT_NAME="${compose_project_name}" \
+            DB_TABLE_NAME="${table_name}" \
             PYTHONPATH=.. python "${MAIN_SCRIPT}" --config_path "${worker_config_rel}"
         ); then
             echo "[${worker}] Failed: ${case_name}" >&2

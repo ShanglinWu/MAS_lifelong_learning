@@ -100,6 +100,13 @@ class EnginePlanner:
         self.token_usage = 0
         self.logger.info("EnginePlanner initialized.")
 
+    def _is_research_memory_context(self) -> bool:
+        persist_dir = getattr(self.memory, "persist_dir", "")
+        if not isinstance(persist_dir, str):
+            return False
+        persist_dir = persist_dir.replace("\\", "/").lower()
+        return "/research/" in persist_dir or persist_dir.endswith("/research")
+
     def create_prompt(self) -> str:
         """
         Create a base prompt for the LLM to assign tasks to agents.
@@ -120,7 +127,7 @@ class EnginePlanner:
             prompt += f"  Profile: {profile['profile']}\n"
 
         # Include transactive memory for better task allocation (if available)
-        if hasattr(self.memory, 'get_transactive_str'):
+        if not self._is_research_memory_context() and hasattr(self.memory, 'get_transactive_str'):
             transactive_info = self.memory.get_transactive_str()
             if transactive_info:
                 prompt += (

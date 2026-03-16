@@ -10,12 +10,15 @@ MAIN_SCRIPT="${ROOT_DIR}/marble/main.py"
 GENERATED_CONFIG_DIR="${GENERATED_CONFIG_DIR:-${ROOT_DIR}/marble/configs/test_config_research_generated}"
 RESEARCH_JSONL="${RESEARCH_JSONL:-${ROOT_DIR}/multiagentbench/research/research_main.jsonl}"
 BASE_CONFIG_MODE="${BASE_CONFIG_MODE:-auto}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 MODEL_NAME="${MODEL_NAME:-gpt-3.5-turbo}"
 EVALUATE_MODEL="${EVALUATE_MODEL:-bedrock/converse/us.anthropic.claude-sonnet-4-5-20250929-v1:0}"
 AGENT_COUNT="${AGENT_COUNT:-3}"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 APPEND_RESULTS="${APPEND_RESULTS:-1}"
+CONSOLIDATION_INTERVAL="${CONSOLIDATION_INTERVAL:-5}"
+RUN_TAG="${RUN_TAG:-}"
 PROFILE_START="${PROFILE_START:-${TASK_START:-1}}"
 PROFILE_END="${PROFILE_END:-${TASK_END:-0}}"
 TASK_PARALLELISM="${TASK_PARALLELISM:-5}"
@@ -24,6 +27,7 @@ SHAREDMEM_TASK_PARALLELISM="${SHAREDMEM_TASK_PARALLELISM:-${TASK_PARALLELISM}}"
 LLMAMEM_TASK_PARALLELISM="${LLMAMEM_TASK_PARALLELISM:-1}"
 
 safe_model_name="$(echo "${MODEL_NAME}" | tr '/:' '__')"
+safe_run_tag="$(echo "${RUN_TAG}" | tr '/:' '__' | tr -cd '[:alnum:]_.-')"
 ACTIVE_CONFIG_DIR="${CONFIG_DIR}"
 ACTIVE_CONFIG_GLOB="${CONFIG_GLOB}"
 TEMP_BASE_CONFIG_DIR=""
@@ -81,12 +85,22 @@ prepare_worker_config() {
 
     cp "${base_config}" "${config_path}"
 
-    python - "${config_path}" "${MODEL_NAME}" "${EVALUATE_MODEL}" "${AGENT_COUNT}" "${memory_type}" "${output_rel}" "${persist_rel}" <<'PY'
+    "${PYTHON_BIN}" - "${config_path}" "${MODEL_NAME}" "${EVALUATE_MODEL}" "${AGENT_COUNT}" "${memory_type}" "${output_rel}" "${persist_rel}" "${CONSOLIDATION_INTERVAL}" <<'PY'
 import sys
 from ruamel.yaml import YAML
 
-config_path, model_name, evaluate_model, agent_count, memory_type, output_rel, persist_rel = sys.argv[1:]
+(
+    config_path,
+    model_name,
+    evaluate_model,
+    agent_count,
+    memory_type,
+    output_rel,
+    persist_rel,
+    consolidation_interval,
+) = sys.argv[1:]
 agent_count = int(agent_count)
+consolidation_interval = int(consolidation_interval)
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -118,7 +132,7 @@ cfg["memory"]["type"] = memory_type
 if memory_type == "LLMAMem":
     cfg["memory"]["topology"] = "local"
     cfg["memory"]["persist_dir"] = persist_rel
-    cfg["memory"]["consolidation_interval"] = 5
+    cfg["memory"]["consolidation_interval"] = consolidation_interval
 else:
     cfg["memory"].pop("topology", None)
     cfg["memory"].pop("persist_dir", None)
@@ -190,7 +204,7 @@ prepare_base_configs() {
             fi
 
             TEMP_BASE_CONFIG_DIR="$(mktemp -d "${ROOT_DIR}/marble/configs/test_config_research_runtime.${safe_model_name}.XXXXXX")"
-            python - "${RESEARCH_JSONL}" "${TEMP_BASE_CONFIG_DIR}" <<'PY'
+            "${PYTHON_BIN}" - "${RESEARCH_JSONL}" "${TEMP_BASE_CONFIG_DIR}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -296,16 +310,31 @@ run_worker() {
 
         local worker_config_dir="${GENERATED_CONFIG_DIR}/${safe_model_name}/${worker}"
         local worker_config_abs="${worker_config_dir}/${config_name}"
-        local worker_config_rel="./configs/test_config_research_generated/${safe_model_name}/${worker}/${config_name}"
-        local output_rel="result/research/${safe_model_name}/${worker}/${profile_name}.jsonl"
-        local output_abs="${ROOT_DIR}/marble/${output_rel}"
+        local worker_config_rel="${worker_config_abs}"
+        local output_rel
+        local output_abs
         local persist_rel
         local persist_abs
 
-        if [[ "${worker}" == "llmamem" ]]; then
-            persist_rel="memory_store/research/${safe_model_name}/${worker}"
+        if [[ -n "${safe_run_tag}" ]]; then
+            output_rel="result/research/${safe_model_name}/${worker}/${safe_run_tag}/${profile_name}.jsonl"
         else
-            persist_rel="memory_store/research/${safe_model_name}/${worker}/${profile_name}"
+            output_rel="result/research/${safe_model_name}/${worker}/${profile_name}.jsonl"
+        fi
+        output_abs="${ROOT_DIR}/marble/${output_rel}"
+
+        if [[ "${worker}" == "llmamem" ]]; then
+            if [[ -n "${safe_run_tag}" ]]; then
+                persist_rel="memory_store/research/${safe_model_name}/${worker}/${safe_run_tag}"
+            else
+                persist_rel="memory_store/research/${safe_model_name}/${worker}"
+            fi
+        else
+            if [[ -n "${safe_run_tag}" ]]; then
+                persist_rel="memory_store/research/${safe_model_name}/${worker}/${safe_run_tag}/${profile_name}"
+            else
+                persist_rel="memory_store/research/${safe_model_name}/${worker}/${profile_name}"
+            fi
         fi
         persist_abs="${ROOT_DIR}/marble/${persist_rel}"
 
@@ -320,7 +349,7 @@ run_worker() {
         echo "[${worker}] Running ${profile_name}..."
         if ! (
             cd "${ROOT_DIR}/marble"
-            PYTHONPATH=.. python "${MAIN_SCRIPT}" --config_path "${worker_config_rel}"
+            PYTHONPATH=.. "${PYTHON_BIN}" "${MAIN_SCRIPT}" --config_path "${worker_config_rel}"
         ); then
             echo "[${worker}] Failed: ${profile_name}" >&2
             failed=1

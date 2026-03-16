@@ -21,6 +21,7 @@ Memory lifecycle:
 
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -48,6 +49,17 @@ class LLMAMem:
 
     EMBEDDING_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
     DEFAULT_CONSOLIDATION_INTERVAL = 5  # N = 5 episodes
+    RESEARCH_MIN_PROCEDURAL_RELEVANCE = 0.62
+    RESEARCH_MIN_PROCEDURAL_SUCCESS_RATE = 0.45
+    DATABASE_MIN_PROCEDURAL_RELEVANCE = 0.58
+    DATABASE_MIN_PROCEDURAL_SUCCESS_RATE = 0.60
+    DATABASE_ANOMALY_LABELS = (
+        "INSERT_LARGE_DATA",
+        "LOCK_CONTENTION",
+        "VACUUM",
+        "REDUNDANT_INDEX",
+        "FETCH_LARGE_DATA",
+    )
 
     def __init__(
         self,
@@ -91,6 +103,8 @@ class LLMAMem:
         # State for current task lifecycle
         self._current_actions: List[Dict[str, Any]] = []
         self._current_task: str = ""
+        self._current_agent_profile: str = ""
+        self._current_role_scope: str = ""
         self._last_retrieved_procedures: List[Dict[str, Any]] = []
         self._episodes_since_consolidation: int = 0
 
@@ -126,7 +140,7 @@ class LLMAMem:
     # Memory Retrieval
     # ==================================================================
 
-    def set_task_context(self, task: str) -> None:
+    def set_task_context(self, task: str, agent_profile: str = "") -> None:
         """
         Set the current task context for retrieval and reset action tracking.
 
@@ -136,8 +150,30 @@ class LLMAMem:
             task: The current task description.
         """
         self._current_task = task
+        self._current_agent_profile = agent_profile
+        self._current_role_scope = self._extract_database_role_scope(agent_profile)
         self._current_actions = []
         self._last_retrieved_procedures = []
+
+    def _is_research_context(self) -> bool:
+        persist_dir = self.persist_dir.replace("\\", "/").lower()
+        if "/research/" in persist_dir or persist_dir.endswith("/research"):
+            return True
+        return False
+
+    def _is_database_context(self) -> bool:
+        persist_dir = self.persist_dir.replace("\\", "/").lower()
+        if "/database/" in persist_dir or persist_dir.endswith("/database"):
+            return True
+        return False
+
+    def _extract_database_role_scope(self, text: str) -> str:
+        if not isinstance(text, str):
+            return ""
+        for label in self.DATABASE_ANOMALY_LABELS:
+            if re.search(rf"\b{re.escape(label)}\b", text):
+                return label
+        return ""
 
     def retrieve(self, query: str, top_k: int = 3) -> str:
         """
@@ -164,15 +200,42 @@ class LLMAMem:
             return ""
         else:
             # Procedural not empty → try procedural first
-            procedures = self.procedural.retrieve(query, top_k=top_k)
+            retrieve_kwargs: Dict[str, Any] = {}
+            if self._is_research_context():
+                retrieve_kwargs = {
+                    "min_relevance": self.RESEARCH_MIN_PROCEDURAL_RELEVANCE,
+                    "min_success_rate": self.RESEARCH_MIN_PROCEDURAL_SUCCESS_RATE,
+                }
+            elif self._is_database_context():
+                retrieve_kwargs = {
+                    "min_relevance": self.DATABASE_MIN_PROCEDURAL_RELEVANCE,
+                    "min_success_rate": self.DATABASE_MIN_PROCEDURAL_SUCCESS_RATE,
+                    "required_role_scope": self._current_role_scope or None,
+                }
+            procedures = self.procedural.retrieve(
+                query,
+                top_k=top_k,
+                **retrieve_kwargs,
+            )
             if procedures is not None:
                 self._last_retrieved_procedures = procedures
                 return self._format_procedural_results(procedures)
             else:
-                # Procedural retrieval returned None → fall back to episodic
+                # Weak or empty procedural match → fall back to episodic/current-task context
                 episodes = self.episodic.retrieve(query, top_k=top_k)
                 if episodes:
-                    return self._format_episodic_results(episodes)
+                    if self._is_database_context():
+                        return (
+                            "[Current Diagnostic Focus]\n"
+                            f"- Assigned anomaly to validate: {self._current_role_scope or 'UNSPECIFIED'}\n"
+                            f"- Use only evidence relevant to this anomaly from the current database task.\n"
+                            + self._format_episodic_results(episodes)
+                        )
+                    return (
+                        "[Current Task Anchor]\n"
+                        f"- Focus on the current paper/topic: {query[:500]}\n"
+                        + self._format_episodic_results(episodes)
+                    )
                 return ""
 
     def _format_episodic_results(self, episodes: List[Dict[str, Any]]) -> str:
@@ -399,12 +462,20 @@ class LLMAMem:
         if context:
             context_section = f"Task Summary (what each agent did and results):\n{context[:1000]}\n\n"
 
+        role_section = ""
+        if self._is_database_context() and self._current_role_scope:
+            role_section = (
+                f"This is a database diagnosis task. The agent's assigned anomaly focus is "
+                f"{self._current_role_scope}. Extract lessons that help validate or rule out only this anomaly.\n\n"
+            )
+
         prompt = (
             "Based on the following task experience, extract 1-2 concise, actionable lessons learned.\n"
             "Focus on CONCRETE actions: which tool functions should have been called, "
             "what patterns worked or failed, and what specific steps to take next time.\n"
             "Do NOT suggest vague advice like 'communicate better' or 'provide clearer instructions'.\n"
             "Instead, suggest specific tool calls or strategies.\n\n"
+            f"{role_section}"
             f"Task: {task_description[:500]}\n\n"
             f"{context_section}"
             f"Actions taken: {actions_str}\n"
@@ -537,6 +608,8 @@ class LLMAMem:
                 source_episodes=source_episode_ids,
                 success_count=success_count,
                 failure_count=failure_count,
+                role_scope=self._current_role_scope if self._is_database_context() else "",
+                anomaly_scope=self._current_role_scope if self._is_database_context() else "",
             )
 
         # Prune overlap procedures

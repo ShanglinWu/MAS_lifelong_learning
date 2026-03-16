@@ -9,6 +9,18 @@ import psycopg2
 from utils.database import DB_CONFIG, Database, DBArgs
 
 
+def db_connect(**kwargs):
+    params = {
+        "dbname": DB_CONFIG["dbname"],
+        "user": DB_CONFIG["user"],
+        "password": DB_CONFIG["password"],
+        "host": DB_CONFIG["host"],
+        "port": DB_CONFIG["port"],
+    }
+    params.update(kwargs)
+    return psycopg2.connect(**params)
+
+
 def init():
     # add the config
     # config_path = "/root/DB-GPT/config/tool_config.yaml"
@@ -36,7 +48,7 @@ def restart_postgresql():
     # return
     try:
         os.chdir("..")
-        os.system("sudo docker compose restart postgres_db")
+        os.system("sudo -E docker compose restart postgres_db")
         print("PostgreSQL Service Rebooted")
     except Exception as e:
         print(f"Local command exec error: {e}")
@@ -225,11 +237,11 @@ def vacuum(threads, duration, ncolumns, nrows, colsize, table_name="table1"):
     cmd = f"python main.py --anomaly IMPROPER_VACUUM --threads {threads} --ncolumn {ncolumns} --nrow {nrows} --colsize {colsize}"
     db = Database(init())
     conn = psycopg2.connect(
-        dbname="sysbench",
-        user="test",
-        password="Test123_456",
-        host="localhost",
-        port="5432",
+        dbname=DB_CONFIG["dbname"],
+        user=DB_CONFIG["user"],
+        password=DB_CONFIG["password"],
+        host=DB_CONFIG["host"],
+        port=DB_CONFIG["port"],
     )
     cur = conn.cursor()
     # Create a new table

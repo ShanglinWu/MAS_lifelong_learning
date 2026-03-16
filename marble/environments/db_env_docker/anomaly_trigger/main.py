@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import anomaly
 import createdatabase
@@ -28,7 +29,10 @@ parser.add_argument("--nrow", type=int, default=100, help="number of rows")
 parser.add_argument("--colsize", type=int, default=200, help="column length")
 parser.add_argument("--table_size", type=int, default=10, help="table size")
 parser.add_argument(
-    "--table_name", type=str, default="table1", help="name of table to be excuted"
+    "--table_name",
+    type=str,
+    default=os.getenv("DB_TABLE_NAME", "table1"),
+    help="name of table to be excuted",
 )
 parser.add_argument(
     "--nindex", type=int, default=5, help="index in the REDUNDANT_INDEX"

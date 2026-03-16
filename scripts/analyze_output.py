@@ -65,11 +65,14 @@ def is_failed(record: Dict[str, Any]) -> bool:
 def compute_ts(record: Dict[str, Any]) -> Optional[float]:
     """
     TS = avg(executability, instruction_following, consistency, quality) * 20.
-    Returns None if task_evaluation is missing or all three fields are absent.
+    For database records, fall back to task_evaluation.task_score when present.
+    Returns None if task_evaluation is missing or no supported fields are present.
     """
     te = record.get("task_evaluation")
     if not isinstance(te, dict):
         return None
+    if isinstance(te.get("task_score"), (int, float)):
+        return float(te["task_score"])
     keys = ["executability", "instruction_following", "consistency", "quality"]
     values = [te[k] for k in keys if k in te and isinstance(te[k], (int, float)) and te[k] != 1]
     if not values:
@@ -82,27 +85,12 @@ def compute_cs(record: Dict[str, Any]) -> Optional[float]:
     CS is computed from two parts (planning, communication):
       - For each part, average valid numeric values excluding -1.
       - If a part exists but all its values are -1, that part is treated as 0.
-      - Final CS = avg(part_planning, part_communication) * 20.
+      - Final CS = avg(all valid planning+communication scores) * 20.
 
     Returns None only if neither part has any numeric entries at all.
     """
     planning = [v for v in record.get("planning_scores", []) if isinstance(v, (int, float))]
     communication = [v for v in record.get("communication_scores", []) if isinstance(v, (int, float))]
-
-    # def _part_avg(values: List[float]) -> Optional[float]:
-    #     if not values:
-    #         return None
-    #     valid = [v for v in values if v != -1]
-    #     if valid:
-    #         return sum(valid) / len(valid)
-    #     # Part exists and all are -1 -> treat as 0 by requirement.
-    #     return 0.0
-
-    # p_avg = _part_avg(planning)
-    # c_avg = _part_avg(communication)
-
-    # if p_avg is None and c_avg is None:
-    #     return None
 
     def _clean_part(values: List[float]) -> Optional[float]:
         if not values:
