@@ -1,0 +1,126 @@
+========================================================================================
+  File : ./marble/result/amem/development_output_bedrock_converse_qwen.qwen3-next-80b-a3b.jsonl
+  Tasks: 100
+========================================================================================
+ Task  Status        TS        CS      AP_t     Input tok    Output tok
+-----------------------------------------------------------------------
+    1      OK     25.00     33.33     25.00       483,573        29,388
+    2      OK     35.00     20.00     30.00       379,265        27,091
+    3      OK     35.00     63.33     31.67       554,241        27,486
+    4      OK     25.00     33.33     30.00       489,610        35,148
+    5      OK     25.00     20.00     29.00       502,207        29,973
+    6    FAIL      SKIP      SKIP      SKIP       476,379        31,084
+    7    FAIL      SKIP      SKIP      SKIP       560,858        47,236
+    8      OK     25.00      3.33     28.33       441,936        37,289
+    9    FAIL      SKIP      SKIP      SKIP       470,220        21,300
+   10    FAIL      SKIP      SKIP      SKIP       477,265        24,803
+   11    FAIL      SKIP      SKIP      SKIP       299,472        28,100
+   12    FAIL      SKIP      SKIP      SKIP       460,587        22,025
+   13    FAIL      SKIP      SKIP      SKIP       461,142        24,024
+   14    FAIL      SKIP      SKIP      SKIP       501,346        38,608
+   15    FAIL      SKIP      SKIP      SKIP       435,659        39,834
+   16    FAIL      SKIP      SKIP      SKIP       531,346        31,384
+   17    FAIL      SKIP      SKIP      SKIP       413,884        25,401
+   18      OK     25.00     10.00     27.86       495,129        21,725
+   19      OK     25.00     30.00     27.50       510,657        35,563
+   20      OK     25.00      3.33     27.22       447,376        37,803
+   21    FAIL      SKIP      SKIP      SKIP       418,838        33,604
+   22    FAIL      SKIP      SKIP      SKIP       478,826        24,771
+   23      OK     30.00      3.33     27.50       469,957        42,147
+   24    FAIL      SKIP      SKIP      SKIP       454,076        24,097
+   25    FAIL      SKIP      SKIP      SKIP       444,952        27,225
+   26    FAIL      SKIP      SKIP      SKIP       479,774        24,544
+   27    FAIL      SKIP      SKIP      SKIP       475,472        25,690
+   28    FAIL      SKIP      SKIP      SKIP       481,277        24,836
+   29    FAIL      SKIP      SKIP      SKIP       470,246        25,291
+   30      OK     25.00      0.00     27.27       441,035        35,931
+   31    FAIL      SKIP      SKIP      SKIP       467,732        23,453
+   32      OK     25.00     13.33     27.08       484,565        24,577
+   33    FAIL      SKIP      SKIP      SKIP       496,937        25,076
+   34      OK     25.00     26.67     26.92       449,651        33,876
+   35      OK     25.00      0.00     26.79       479,213        46,576
+   36    FAIL      SKIP      SKIP      SKIP       462,587        29,623
+   37    FAIL      SKIP      SKIP      SKIP       486,856        25,029
+   38      OK       N/A       N/A     26.79             0             0
+   39    FAIL      SKIP      SKIP      SKIP       446,141        36,821
+   40    FAIL      SKIP      SKIP      SKIP       488,470        27,377
+   41    FAIL      SKIP      SKIP      SKIP       402,267        40,602
+   42    FAIL      SKIP      SKIP      SKIP       457,162        38,314
+   43    FAIL      SKIP      SKIP      SKIP       482,630        30,114
+   44    FAIL      SKIP      SKIP      SKIP       402,187        27,771
+   45      OK     25.00     26.67     26.67       457,171        24,080
+   46    FAIL      SKIP      SKIP      SKIP       464,898        24,629
+   47    FAIL      SKIP      SKIP      SKIP       480,569        28,854
+   48    FAIL      SKIP      SKIP      SKIP       433,981        22,129
+   49    FAIL      SKIP      SKIP      SKIP       502,064        26,032
+   50    FAIL      SKIP      SKIP      SKIP       569,409        45,383
+   51    FAIL      SKIP      SKIP      SKIP       670,943        30,246
+   52    FAIL      SKIP      SKIP      SKIP       502,423        40,082
+   53    FAIL      SKIP      SKIP      SKIP       471,962        23,777
+   54      OK     25.00      3.33     26.56       457,143        42,598
+   55      OK     25.00      3.33     26.47       344,548        53,708
+   56      OK     25.00     30.00     26.39       439,379        26,926
+   57      OK     25.00     20.00     26.32       480,203        28,468
+   58      OK     25.00     26.67     26.25       479,141        30,145
+   59      OK     25.00     10.00     26.19       474,219        36,166
+   60    FAIL      SKIP      SKIP      SKIP       471,908        22,977
+   61      OK     25.00      3.33     26.14       436,209        28,773
+   62    FAIL      SKIP      SKIP      SKIP       468,254        23,258
+   63      OK     25.00      6.67     26.09       564,098        32,644
+   64      OK     25.00     23.33     26.04       470,460        25,050
+   65      OK     25.00     26.67     26.00       468,101        25,704
+   66    FAIL      SKIP      SKIP      SKIP       573,472        39,507
+   67    FAIL      SKIP      SKIP      SKIP       453,107        34,556
+   68      OK     25.00      3.33     25.96       425,964        42,756
+   69    FAIL      SKIP      SKIP      SKIP       479,048        20,122
+   70      OK     25.00     43.33     25.93       543,050        34,243
+   71      OK     25.00     23.33     25.89       399,654        21,731
+   72    FAIL      SKIP      SKIP      SKIP       503,597        31,269
+   73    FAIL      SKIP      SKIP      SKIP       497,377        23,658
+   74    FAIL      SKIP      SKIP      SKIP       484,245        29,530
+   75      OK     35.00     30.00     26.21       462,998        22,856
+   76    FAIL      SKIP      SKIP      SKIP       591,815        30,825
+   77    FAIL      SKIP      SKIP      SKIP       445,029        17,969
+   78    FAIL      SKIP      SKIP      SKIP       460,482        21,968
+   79      OK     25.00     23.33     26.17       471,963        30,534
+   80      OK     25.00     16.67     26.13       472,720        24,541
+   81      OK     25.00     26.67     26.09       575,320        28,124
+   82    FAIL      SKIP      SKIP      SKIP       538,722        26,975
+   83    FAIL      SKIP      SKIP      SKIP       522,983        35,220
+   84    FAIL      SKIP      SKIP      SKIP       614,683        32,673
+   85      OK     25.00     20.00     26.06       478,409        26,363
+   86      OK     25.00     40.00     26.03       539,678        21,875
+   87    FAIL      SKIP      SKIP      SKIP             0             0
+   88      OK     25.00     23.33     26.00       511,124        35,219
+   89      OK     35.00     30.00     26.25       519,976        28,880
+   90      OK     25.00     20.00     26.22       275,497        21,870
+   91      OK     25.00     16.67     26.18       544,053        34,990
+   92      OK     25.00     20.00     26.15       517,035        28,969
+   93      OK     25.00     20.00     26.12       540,377        28,909
+   94    FAIL      SKIP      SKIP      SKIP       442,403        38,798
+   95    FAIL      SKIP      SKIP      SKIP       461,969        21,451
+   96    FAIL      SKIP      SKIP      SKIP       507,295        29,171
+   97    FAIL      SKIP      SKIP      SKIP       467,677        40,499
+   98    FAIL      SKIP      SKIP      SKIP       463,558        40,350
+   99    FAIL      SKIP      SKIP      SKIP       420,473        32,768
+  100    FAIL      SKIP      SKIP      SKIP       466,228        22,494
+-----------------------------------------------------------------------
+  AVG           26.1250   19.9167   26.8155      462851.3       30504.8
+========================================================================================
+
+Summary
+  TS  = avg(executability + instruction_following + consistency + quality) × 20
+  CS  = avg(planning_scores + communication_scores, skip -1) × 20
+  AP_t = (1/t) * sum(TS_1 .. TS_t)   [running avg of TS across first t passed tasks]
+  AIP  = (1/T) * sum(AP_1 .. AP_T)   [mean of all AP_t values]
+  Tasks with all 1s are marked FAIL
+  Avg TS                         : 26.1250
+  Avg CS                         : 19.9167
+  AIP                            : 26.8155
+  Avg input tokens  (per task)   : 462851.3
+  Avg output tokens (per task)   : 30504.8
+  Passed / Total                 : 41 / 100
+  Failed (all 1s or no output)   : 59
+  Tasks with valid TS            : 40 / 41
+  Tasks with valid CS            : 40 / 41
+========================================================================================

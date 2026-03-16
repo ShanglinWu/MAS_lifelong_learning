@@ -345,7 +345,7 @@ class Engine:
             f"A-MEM initialized with '{topology_str}' topology for {len(self.agents)} agents."
         )
 
->>>>>>> amem
+# >>>>>>> amem
     def graph_coordinate(self) -> None:
         """
         Graph-based coordination mode.

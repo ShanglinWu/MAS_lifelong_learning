@@ -104,7 +104,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -140,7 +140,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -172,7 +172,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -208,7 +208,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -239,7 +239,7 @@ class Evaluator:
             llm_model=self.llm,
             messages=[{"role": "user", "content": prompt}],
             return_num=1,
-            max_token_num=512,
+            max_token_num=1024,
             temperature=0.0,
             top_p=None,
             stream=None,
@@ -316,11 +316,36 @@ class Evaluator:
             pred_num (int): The number of predicted root causes.
             root_causes (List[str]): The root cause labels.
         """
-        # Evaluation will take place separately as it might not follow the
-        # requested format
+        # Paper metric: a sample is correct if at least one predicted root cause
+        # matches a true root cause. The task score is the sample accuracy scaled
+        # to 5, so each per-sample record carries either 5.0 or 0.0.
+        predicted_text = str(result or "")
+        predicted_lower = predicted_text.lower()
+
+        matched_labels = []
+        for label in labels:
+            if not isinstance(label, str):
+                continue
+            if label.lower() in predicted_lower and label not in matched_labels:
+                matched_labels.append(label)
+
+        predicted_labels = matched_labels[:pred_num] if pred_num > 0 else matched_labels
+        normalized_root_causes = {
+            cause.lower()
+            for cause in root_causes
+            if isinstance(cause, str)
+        }
+        prediction_hit = any(
+            label.lower() in normalized_root_causes
+            for label in predicted_labels
+        )
+
         self.metrics["task_evaluation"] = {
             'root_cause': root_causes,
             'predicted': result,
+            'predicted_labels': predicted_labels,
+            'prediction_hit': prediction_hit,
+            'task_score': 5.0 if prediction_hit else 0.0,
         }
 
     def parse_research_ratings(self, assistant_answer: str) -> Dict[str, int]:
@@ -572,7 +597,7 @@ class Evaluator:
 
                     ### **Evaluation Criteria**
                     1. **Instruction-Following:** Does the code fulfill all the requirements of the task? Deduct points for unmet or partially met requirement from the task instructions.
-                    2. **Executability:** Is the code syntactically correct and executable? The solution may be wrapped in a JSON object (e.g. ```json {{"solution.py": "..."}}) with escaped newlines (\\n) and escaped quotes (\\"). This is just a delivery format — you MUST mentally parse and unescape the code before judging executability. Evaluate the actual Python code inside the JSON string value, NOT the JSON wrapper. Ignore formatting artifacts. Focus only on whether the underlying Python logic and syntax are correct.
+                    2. **Executability:** Is the code syntactically correct and executable? Deduct points for any syntax errors, missing imports, or runtime errors.
                     3. **Consistency:** Is the code consistent in variable naming, formatting, and logic? Deduct points for inconsistent variable naming, formatting issues, or contradictory logic.
                     4. **Quality:** Is the code well-documented, clear, and modular? Deduct points for poor documentation, unclear logic, or lack of modular design.
 
@@ -610,7 +635,7 @@ class Evaluator:
                 llm_model=self.llm,
                 messages=[{"role": "user", "content": prompt}],
                 return_num=1,
-                max_token_num=4096,
+                max_token_num=1024,
                 temperature=0.0,
                 top_p=None,
                 stream=None,
@@ -646,8 +671,8 @@ class Evaluator:
 
         Normalises every environment's metrics to a 0-1 task_score and derives a
         boolean task_success flag using:
-            * 1-5 scale  →  success when mean score >= 2.5  (i.e. task_score >= 0.25)
-            * 0-1 scale  →  success when score >= 0.5
+            * 1-5 scale  →  success when mean score >= 3  (i.e. task_score >= 0.25)
+            * 0-1 scale  →  success when score >= 0.65 for coding, 0.80 for research, 0.50 for databse
 
         Args:
             env_name: The environment name / type string.
@@ -668,7 +693,7 @@ class Evaluator:
                 dimension_scores = dict(cq)
                 raw_mean = sum(cq.values()) / len(cq)  # 1-5
                 task_score = (raw_mean - 1.0) / 4.0     # normalise to 0-1
-                task_success = raw_mean >= 2.5
+                task_success = raw_mean >= 3.0
             else:
                 task_score = 0.0
                 task_success = False
@@ -681,7 +706,7 @@ class Evaluator:
                 if vals:
                     raw_mean = sum(vals) / len(vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.5
+                    task_success = raw_mean >= 3.0
                 else:
                     task_score = 0.0
                     task_success = False
@@ -695,24 +720,25 @@ class Evaluator:
                 block_hit_rate = task_eval / 5.0  # back to 0-1
                 dimension_scores = {"block_hit_rate": block_hit_rate}
                 task_score = block_hit_rate
-                task_success = block_hit_rate >= 0.5
+                task_success = block_hit_rate >= 0.65
             else:
                 task_score = 0.0
                 task_success = False
 
         elif env_name == "DB Environment":
-            # DB stores {root_cause: [...], predicted: str} — no numeric score yet
-            # Use simple match check: success if predicted text mentions any label
+            # DB stores a per-sample binary accuracy signal aligned to the paper:
+            # one sample is correct if at least one predicted root cause matches
+            # a true root cause.
             if isinstance(task_eval, dict):
                 dimension_scores = dict(task_eval)
-                root_causes = task_eval.get("root_cause", [])
-                predicted = str(task_eval.get("predicted", "")).lower()
-                if root_causes and predicted:
-                    matches = sum(
-                        1 for rc in root_causes if rc.lower() in predicted
-                    )
-                    task_score = matches / len(root_causes) if root_causes else 0.0
-                    task_success = task_score >= 0.5
+                prediction_hit = task_eval.get("prediction_hit")
+                if isinstance(prediction_hit, bool):
+                    task_score = 1.0 if prediction_hit else 0.0
+                    task_success = prediction_hit
+                elif isinstance(task_eval.get("task_score"), (int, float)):
+                    raw_score = float(task_eval["task_score"])
+                    task_score = 1.0 if raw_score > 0 else 0.0
+                    task_success = raw_score > 0
                 else:
                     task_score = 0.0
                     task_success = False
@@ -734,7 +760,7 @@ class Evaluator:
                 if all_vals:
                     raw_mean = sum(all_vals) / len(all_vals)
                     task_score = (raw_mean - 1.0) / 4.0
-                    task_success = raw_mean >= 2.5
+                    task_success = raw_mean >= 3.0
                 else:
                     task_score = 0.0
                     task_success = False

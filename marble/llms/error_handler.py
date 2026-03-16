@@ -2,12 +2,12 @@ import math
 import time
 from functools import wraps
 
-from beartype.typing import Any, Callable, List, Optional, Set, TypeVar, Union, cast
+from beartype.typing import Any, Callable, TypeVar, cast
 from pydantic import BaseModel
 
 INF = float(math.inf)
 
-T = TypeVar("T", bound=Callable[..., Union[Optional[List[Any]], Set[str]]])
+T = TypeVar("T", bound=Callable[..., Any])
 
 
 def api_calling_error_exponential_backoff(
@@ -22,7 +22,7 @@ def api_calling_error_exponential_backoff(
 
     def decorator(func: T) -> T:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Optional[List[str]]:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             error_handler_mode = kwargs.get("mode", None)
             if error_handler_mode == "TEST":
                 modified_retries = 1
@@ -32,10 +32,12 @@ def api_calling_error_exponential_backoff(
                 modified_base_wait_time = base_wait_time
 
             attempts = 0
+            last_exception: Exception | None = None
             while attempts < modified_retries:
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
+                    last_exception = e
                     wait_time = modified_base_wait_time * (2**attempts)
                     print(f"Attempt {attempts + 1} failed: {e}")
                     print(f"Waiting {wait_time} seconds before retrying...")
@@ -44,7 +46,11 @@ def api_calling_error_exponential_backoff(
             print(
                 f"Failed to execute '{func.__name__}' after {modified_retries} retries."
             )
-            return None
+            if last_exception is not None:
+                raise last_exception
+            raise RuntimeError(
+                f"Failed to execute '{func.__name__}' after {modified_retries} retries."
+            )
 
         return cast(T, wrapper)
 
@@ -66,12 +72,14 @@ def parsing_error_exponential_backoff(
 
     def decorator(func: TBaseModel) -> TBaseModel:
         @wraps(func)
-        def wrapper(self: Any, *args: Any, **kwargs: Any) -> Optional[BaseModel]:
+        def wrapper(self: Any, *args: Any, **kwargs: Any) -> BaseModel:
             attempts = 0
+            last_exception: Exception | None = None
             while attempts < retries:
                 try:
                     return func(self, *args, **kwargs)
                 except Exception as e:
+                    last_exception = e
                     wait_time = base_wait_time * (2**attempts)
                     print(f"Attempt {attempts + 1} failed: {e}")
                     print(f"Waiting {wait_time} seconds before retrying...")
@@ -80,7 +88,11 @@ def parsing_error_exponential_backoff(
             print(
                 f"Failed to get valid input from {func.__name__} after {retries} retries."
             )
-            return None
+            if last_exception is not None:
+                raise last_exception
+            raise RuntimeError(
+                f"Failed to get valid input from {func.__name__} after {retries} retries."
+            )
 
         return cast(TBaseModel, wrapper)
 

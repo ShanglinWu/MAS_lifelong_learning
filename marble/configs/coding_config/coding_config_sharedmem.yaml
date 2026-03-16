@@ -24,13 +24,15 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a system called Collaborative Build Optimizer (CBO) that enhances the build process for software projects by integrating code efficiency analysis, task management, and build time estimation. Collaborative Build Optimizer is a comprehensive development tool designed to optimize the build process by analyzing code efficiency, managing development tasks with dependencies, and estimating build times, thereby improving overall development productivity and project management.
+    Please write a program called 'Team_Treasure_Hunt' that is a multiplayer action game where teams of players collaborate to navigate through a series of challenging environments, collect treasures, and solve puzzles to reach a final treasure chamber. Each team member has unique abilities that are essential for solving specific puzzles and overcoming obstacles. The game includes various environments such as forests, caves, and ancient ruins, each with its own set of challenges. The team that collects the most treasures and reaches the final chamber first wins the game.
     1. Implementation requirements:
-       - Develop a Code Efficiency Analyzer module that evaluates the efficiency of code snippets and provides recommendations for optimizing performance based on metrics such as time complexity, space complexity, and algorithmic inefficiencies. This module must be completed before integrating it into the main system.
-       - Create a Development Task Tracker module that allows development teams to manage and track project tasks, including setting task priorities, due dates, and dependencies between tasks. This module must be completed and integrated into the main system after the Code Efficiency Analyzer module is ready.
-       - Implement a Build Time Estimator module that calculates the estimated time required to build a software project based on code complexity, number of modules, and development team size. This module must be developed and integrated into the main system after the Development Task Tracker module is functional.
-       - Integrate all three modules into a unified system where the Code Efficiency Analyzer provides insights that can be used to optimize tasks in the Development Task Tracker, and the Build Time Estimator takes into account the optimized code and task management to provide more accurate build time estimates.
-       - Ensure that the system supports real-time updates and notifications for task status, build progress, and efficiency recommendations, enhancing collaboration and communication among team members.
+       - Implement a game engine that supports multiplayer functionalities, allowing up to four players per team.
+       - Design different environments with varying levels of difficulty, including puzzles that require collaboration and the use of unique character abilities.
+       - Create a set of unique character abilities, such as strength (for moving heavy objects), agility (for navigating tight spaces), intelligence (for solving complex puzzles), and stealth (for avoiding traps).
+       - Develop a scoring system that rewards teams based on the number of treasures collected and the time taken to reach the final chamber.
+       - Provide comprehensive test specifications, including input scenarios such as different player actions, expected outputs like the game state changes, and edge cases such as players leaving the game or failing to solve puzzles.
+       - Ensure the game is robust and can handle unexpected inputs or behaviors from players, such as simultaneous actions or incorrect puzzle solutions.
+       - Test the game with different team compositions and strategies to ensure balanced and fair gameplay.
 
 
     2. Project structure:
@@ -91,9 +93,21 @@ agents:
 
 memory:
   type: SharedMemory
+  amem:
+    enabled: false
+    topology: local
+    evolution_enabled: true
+    evolution_threshold: 100
+    embedding_model: all-MiniLM-L6-v2
+    llm_backend: openai
+    llm_model: gpt-4o-mini
+    retrieval_k: 5
+
+  llma_mem:
+    enabled: false
 metrics:
-  # evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-  evaluate_llm: "gpt-4o-mini-2024-07-18"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true

@@ -99,7 +99,7 @@ memory:
   consolidation_interval: 3
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
   amem:
-    enabled: false
+    enabled: True
     topology: local
     evolution_enabled: true
     evolution_threshold: 100
@@ -109,8 +109,8 @@ memory:
     retrieval_k: 5
 
 metrics:
-  # evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-  evaluate_llm: "gpt-4o-mini-2024-07-18"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true

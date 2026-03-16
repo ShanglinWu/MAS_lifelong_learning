@@ -63,6 +63,14 @@ def model_prompting(
     else:
         base_url = None
 
+    # For Bedrock bearer-token auth, pass the token explicitly to LiteLLM.
+    # This avoids ambiguity across LiteLLM versions/env resolution behavior.
+    resolved_api_key = api_key
+    if "bedrock" in llm_model and resolved_api_key is None:
+        resolved_api_key = os.getenv("AWS_BEARER_TOKEN_BEDROCK") or os.getenv(
+            "AWS_BEDROCK_API_KEY"
+        )
+
     # Bedrock rejects requests where both temperature and top_p are set.
     # Drop top_p for bedrock models when both are specified.
     if "bedrock" in llm_model and temperature is not None and top_p is not None:
@@ -71,7 +79,7 @@ def model_prompting(
     completion = litellm.completion(
         model=llm_model,
         messages=messages,
-        max_tokens=max_token_num,
+        # max_tokens=max_token_num,
         n=return_num,
         top_p=top_p,
         temperature=temperature,
@@ -79,7 +87,7 @@ def model_prompting(
         tools=tools,
         tool_choice=tool_choice,
         base_url=base_url,
-        # api_key=api_key,
+        # api_key=resolved_api_key,
     )
     message_0: Message = completion.choices[0].message
     print(f"Received response from model: {message_0}")

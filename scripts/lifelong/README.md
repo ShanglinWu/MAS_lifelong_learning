@@ -40,6 +40,6 @@ A-MEM options:
 - `--amem_evolution_enabled {true,false}`
 - `--amem_evolution_threshold INT`
 - `--amem_embedding_model MODEL_NAME`
-- `--amem_llm_backend {openai,ollama}`
+- `--amem_llm_backend {openai,ollama,bedrock}`
 - `--amem_llm_model MODEL_NAME`
 - `--amem_retrieval_k INT`

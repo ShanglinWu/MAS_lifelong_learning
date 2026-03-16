@@ -24,11 +24,15 @@ task:
   content: |-
     Software Development Task:
 
-    Please write a software system called Cultural_Journey that provides an interactive and educational experience for users to explore different cultures through a combination of quizzes, puzzles, and recipe exploration. Cultural_Journey is a comprehensive system that integrates various cultural elements into a single platform, allowing users to deepen their understanding of different traditions, customs, and cuisines from around the world.
+    Please write a program called 'Team_Treasure_Hunt' that is a multiplayer action game where teams of players collaborate to navigate through a series of challenging environments, collect treasures, and solve puzzles to reach a final treasure chamber. Each team member has unique abilities that are essential for solving specific puzzles and overcoming obstacles. The game includes various environments such as forests, caves, and ancient ruins, each with its own set of challenges. The team that collects the most treasures and reaches the final chamber first wins the game.
     1. Implementation requirements:
-       - 1. **Quiz Module Development**: Develop a quiz module that includes multiple-choice questions about cultural traditions, customs, and festivals. This module should be the first to be completed as it provides the foundational knowledge required for the other modules.
-       - 2. **Puzzle Module Development**: Once the Quiz Module is complete, develop a puzzle module that features cultural scenes and elements. Users should solve puzzles by matching pieces that represent different aspects of a culture, such as traditional clothing, landmarks, and animals. The Quiz Module will provide the necessary cultural context for the puzzles.
-       - 3. **Recipe Module Development**: After the Puzzle Module is ready, create a recipe module that allows users to explore traditional dishes from different cultures. This module should include step-by-step instructions, ingredient lists, cooking tips, and cultural insights. The Quiz and Puzzle Modules will have prepared users with the necessary cultural background to appreciate the culinary practices.
+       - Implement a game engine that supports multiplayer functionalities, allowing up to four players per team.
+       - Design different environments with varying levels of difficulty, including puzzles that require collaboration and the use of unique character abilities.
+       - Create a set of unique character abilities, such as strength (for moving heavy objects), agility (for navigating tight spaces), intelligence (for solving complex puzzles), and stealth (for avoiding traps).
+       - Develop a scoring system that rewards teams based on the number of treasures collected and the time taken to reach the final chamber.
+       - Provide comprehensive test specifications, including input scenarios such as different player actions, expected outputs like the game state changes, and edge cases such as players leaving the game or failing to solve puzzles.
+       - Ensure the game is robust and can handle unexpected inputs or behaviors from players, such as simultaneous actions or incorrect puzzle solutions.
+       - Test the game with different team compositions and strategies to ensure balanced and fair gameplay.
 
 
     2. Project structure:
@@ -93,10 +97,21 @@ memory:
   persist_dir: memory_store/llmamem
   consolidation_interval: 3
   # SharedMemory, BaseMemory, NoMemory, LLMAMem
+  amem:
+    enabled: false
+    topology: local
+    evolution_enabled: true
+    evolution_threshold: 100
+    embedding_model: all-MiniLM-L6-v2
+    llm_backend: openai
+    llm_model: gpt-4o-mini
+    retrieval_k: 5
 
+  llma_mem:
+    enabled: false
 metrics:
-  # evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
-  evaluate_llm: "gpt-4o-mini-2024-07-18"
+  evaluate_llm: "bedrock/converse/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  # evaluate_llm: "gpt-4o-mini-2024-07-18"
   code_quality: true
   test_coverage: true
   collaboration_effectiveness: true
