@@ -1,3 +1,4 @@
+from .a_mem import AMemMemory
 from .base_memory import BaseMemory
 from .episodic_memory import EpisodicMemory
 from .llma_mem import LLMAMem
@@ -9,6 +10,7 @@ from .short_term_memory import ShortTermMemory
 from .transactive_memory import TransactiveMemory
 
 __all__ = [
+    "AMemMemory",
     "BaseMemory",
     "EpisodicMemory",
     "LLMAMem",

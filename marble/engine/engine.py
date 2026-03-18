@@ -22,6 +22,7 @@ from marble.environments import (
 )
 from marble.evaluator.evaluator import Evaluator
 from marble.graph.agent_graph import AgentGraph
+from marble.memory.a_mem import AMemMemory
 from marble.memory.base_memory import BaseMemory
 from marble.memory.llma_mem import LLMAMem
 from marble.memory.null_memory import NullMemory
@@ -213,6 +214,22 @@ class Engine:
                 agent.memory = llma_memories[agent.agent_id]
             # Return first instance for planner (gives access to transactive memory)
             memory = list(llma_memories.values())[0]
+        elif memory_type == "AMemMemory":
+            planner_memory = SharedMemory()
+            embedding_model = memory_config.get("embedding_model", "")
+            retrieval_top_k = memory_config.get("retrieval_top_k", 3)
+            max_memory_context = memory_config.get("max_memory_context", 5)
+            link_threshold = memory_config.get("link_threshold", 0.72)
+            for agent in self.agents:
+                agent.memory = AMemMemory(
+                    agent_id=agent.agent_id,
+                    llm_model=agent.llm,
+                    embedding_model=embedding_model,
+                    retrieval_top_k=retrieval_top_k,
+                    max_memory_context=max_memory_context,
+                    link_threshold=link_threshold,
+                )
+            memory = planner_memory
         elif memory_type == "SharedMemory":
             memory = SharedMemory()
         elif memory_type == "NoMemory":
