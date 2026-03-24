@@ -1,32 +1,18 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "llma-mem"
 version = "0.1.0"
 description = "Focused LLMA-Mem package for lifelong multi-agent memory experiments."
-authors = ["Kunlun Zhu <kunlunz2@illinois.edu>"]
-license = "Apache-2.0"
 readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = []
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-beartype = { version = "*", optional = true }
-litellm = { version = "^1.52.1", optional = true }
+[tool.setuptools]
+include-package-data = true
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-pythonpath = ["."]
-
-[tool.ruff]
-line-length = 88
-target-version = "py310"
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
+[tool.setuptools.packages.find]
+include = ["llmamem*"]

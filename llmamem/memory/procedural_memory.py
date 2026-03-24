@@ -17,8 +17,8 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Set
 
-from marble.memory.similarity import cosine_similarity
-from marble.llms.text_embedding import text_embedding
+from llmamem.memory.similarity import cosine_similarity
+from llmamem.llms.text_embedding import text_embedding
 
 
 class ProceduralMemory:

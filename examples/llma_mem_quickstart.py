@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from marble.memory import LLMAMem
+from llmamem.memory import LLMAMem
 
 
 def fake_embedding(model: str, input: str) -> list[float]:
@@ -27,8 +27,8 @@ def main() -> None:
     if persist_dir.exists():
         shutil.rmtree(persist_dir)
 
-    with patch("marble.memory.episodic_memory.text_embedding", side_effect=fake_embedding), patch(
-        "marble.memory.procedural_memory.text_embedding",
+    with patch("llmamem.memory.episodic_memory.text_embedding", side_effect=fake_embedding), patch(
+        "llmamem.memory.procedural_memory.text_embedding",
         side_effect=fake_embedding,
     ):
         team = LLMAMem.create_for_topology(

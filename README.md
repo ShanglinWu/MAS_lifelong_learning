@@ -1,64 +1,102 @@
-# LLMA-Mem
+<div align="center">
+  <h1>LLMA-Mem</h1>
+  <p><strong>Lifelong Multi-Agent Memory</strong></p>
+  <p>A focused Python package for persistent episodic, procedural, and transactive memory in multi-agent systems.</p>
+</div>
 
-This repository has been reduced to the LLMA-Mem code only.
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#figures">Figures</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#testing">Testing</a>
+</p>
 
-LLMA-Mem is a lifelong multi-agent memory framework with three coordinated memory layers:
+## Overview
 
-- `EpisodicMemory`: stores full task experiences.
-- `ProceduralMemory`: stores reusable strategies extracted from past work.
-- `TransactiveMemory`: stores agent capabilities and team collaboration patterns.
+LLMA-Mem gives multi-agent workflows a memory system that survives beyond a single run.
 
-The package entrypoint is `marble.memory.LLMAMem`.
+It combines three memory layers:
 
-## What was removed
+| Layer | Purpose |
+| --- | --- |
+| `EpisodicMemory` | Stores full task experiences and outcomes |
+| `ProceduralMemory` | Stores reusable strategies distilled from prior work |
+| `TransactiveMemory` | Stores agent capability profiles and collaboration patterns |
 
-The previous repo mixed LLMA-Mem with MultiAgentBench datasets, MARBLE environments, AMem code, generated experiment outputs, and benchmark scripts. Those parts were removed so the repo is focused on LLMA-Mem and easier to run directly.
+The main entrypoint is `llmamem.memory.LLMAMem`.
+
+## Figures
+
+The repository includes the original LLMA-Mem figures as PDF assets:
+
+| Figure | Description |
+| --- | --- |
+| [Architecture_topology.pdf](images/Architecture_topology.pdf) | System structure and supported memory topologies |
+| [lifecycle.pdf](images/lifecycle.pdf) | Retrieval, update, and consolidation lifecycle |
+
+If your Markdown viewer supports PDF preview, open them directly from the links above. On GitHub, they will open in the repository file viewer.
+
+## Why This Repo
+
+This repository is intentionally trimmed down to LLMA-Mem only.
+
+- No MultiAgentBench datasets
+- No MARBLE environment framework
+- No benchmark scripts or generated experiment outputs
+- No Poetry-based workflow
+
+The result is a smaller, cleaner package that is easier to install, test, and plug into your own agent stack.
 
 ## Installation
 
+Set up a plain Python environment:
+
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -U pip
-pip install poetry
-poetry install
+python -m pip install -U pip
+python -m pip install -e .
 ```
 
-If you want to use real embedding and LLM backends, set the environment variables required by your LiteLLM provider before running your own experiments.
+If you want real provider-backed LLM and embedding calls, install the optional dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
 
 ## Quickstart
 
 Run the local demo:
 
 ```bash
-poetry run python examples/llma_mem_quickstart.py
+python3 examples/llma_mem_quickstart.py
 ```
 
-The demo is plug and play:
+What the demo does:
 
-- it does not call external APIs,
-- it uses mocked embeddings,
-- it writes sample memory artifacts to `memory_store/demo/`,
-- it shows how one agent writes memory and another retrieves it.
+- runs without external APIs
+- mocks embeddings locally
+- writes sample artifacts into `memory_store/demo/`
+- shows one agent writing memory and another retrieving it
 
-## General Usage Guideline
+## Usage
 
-1. Create one `LLMAMem` instance per agent, or use `LLMAMem.create_for_topology(...)` for `local`, `shared`, or `hybrid` memory layouts.
-2. Call `set_task_context(task_description, agent_profile=...)` at the start of each task.
-3. Record intermediate actions with `record_action(...)` or `update(...)`.
-4. Retrieve prompt-ready memory context with `get_memory_str()`.
-5. After the task finishes, call `update_after_task(...)` with:
-   - `task_description`
-   - `team_composition`
-   - `outcome`
-   - optional `context`
-   - optional `task_type`
-6. Persist and reload memory by pointing future runs to the same `persist_dir`.
+### Recommended flow
 
-## Minimal Example
+1. Create one `LLMAMem` instance per agent, or use `LLMAMem.create_for_topology(...)`.
+2. Choose a topology: `local`, `shared`, or `hybrid`.
+3. Call `set_task_context(...)` before each task.
+4. Record actions with `record_action(...)` or `update(...)`.
+5. Pull prompt-ready memory with `get_memory_str()`.
+6. Finalize the task with `update_after_task(...)`.
+7. Reuse the same `persist_dir` across runs to keep memory persistent.
+
+### Minimal example
 
 ```python
-from marble.memory import LLMAMem
+from llmamem.memory import LLMAMem
 
 team = LLMAMem.create_for_topology(
     topology="shared",
@@ -69,7 +107,9 @@ team = LLMAMem.create_for_topology(
 
 planner = team["planner"]
 planner.set_task_context("Diagnose the API timeout regression.")
-planner.record_action({"tool": "inspect_logs", "result": "Timeouts started after cache rollout."})
+planner.record_action(
+    {"tool": "inspect_logs", "result": "Timeouts started after cache rollout."}
+)
 
 planner.update_after_task(
     task_description="Diagnose the API timeout regression.",
@@ -80,27 +120,45 @@ planner.update_after_task(
 )
 ```
 
+### Topologies
+
+| Topology | Behavior |
+| --- | --- |
+| `local` | Each agent has private episodic, procedural, and transactive memory |
+| `shared` | All agents share the same memory stores |
+| `hybrid` | Local episodic memory with shared higher-level memory structures |
+
 ## Testing
 
+Run the built-in tests with standard library tooling:
+
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-The included test suite covers:
+The current tests cover:
 
-- topology creation,
-- episode persistence,
-- transactive-memory updates,
-- procedural-memory retrieval.
+- shared-topology initialization
+- episode persistence
+- transactive-memory updates
+- procedural-memory retrieval priority
 
-## Repo Layout
+## Repository Layout
 
 ```text
-marble/
+llmamem/
   llms/
   memory/
 examples/
+images/
 tests/
 README.md
-pyproject.toml
+requirements.txt
+setup.py
 ```
+
+## Notes
+
+- `requirements.txt` is optional and only needed for real LiteLLM-backed calls.
+- The package imports cleanly without those provider dependencies for local demo/testing.
+- Generated memory files are written under `memory_store/` and are ignored by git.

@@ -24,11 +24,11 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from marble.llms.model_prompting import model_prompting
-from marble.memory.episodic_memory import EpisodicMemory
-from marble.memory.procedural_memory import ProceduralMemory
-from marble.memory.similarity import cluster_by_similarity
-from marble.memory.transactive_memory import TransactiveMemory
+from llmamem.llms.model_prompting import model_prompting
+from llmamem.memory.episodic_memory import EpisodicMemory
+from llmamem.memory.procedural_memory import ProceduralMemory
+from llmamem.memory.similarity import cluster_by_similarity
+from llmamem.memory.transactive_memory import TransactiveMemory
 
 
 class LLMAMem:

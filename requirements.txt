@@ -1,0 +1,3 @@
+# Optional runtime dependencies for real provider-backed LLM/embedding calls.
+litellm>=1.52.1
+beartype

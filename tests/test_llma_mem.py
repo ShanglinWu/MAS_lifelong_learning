@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from marble.memory import EpisodicMemory, LLMAMem, ProceduralMemory, TransactiveMemory
+from llmamem.memory import EpisodicMemory, LLMAMem, ProceduralMemory, TransactiveMemory
 
 
 def fake_embedding(model: str, input: str) -> list[float]:
@@ -40,7 +40,7 @@ class TestLLMAMem(unittest.TestCase):
 
     def test_update_after_task_persists_episode_and_transactive_state(self) -> None:
         with patch(
-            "marble.memory.episodic_memory.text_embedding",
+            "llmamem.memory.episodic_memory.text_embedding",
             side_effect=fake_embedding,
         ):
             memory = LLMAMem(
@@ -74,7 +74,7 @@ class TestLLMAMem(unittest.TestCase):
 
     def test_retrieval_prefers_procedural_memory_when_available(self) -> None:
         with patch(
-            "marble.memory.procedural_memory.text_embedding",
+            "llmamem.memory.procedural_memory.text_embedding",
             side_effect=fake_embedding,
         ):
             procedural = ProceduralMemory(

@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover - optional dependency path
     def beartype(func: Any) -> Any:
         return func
 
-from marble.llms.error_handler import api_calling_error_exponential_backoff
+from llmamem.llms.error_handler import api_calling_error_exponential_backoff
 
 
 @beartype
