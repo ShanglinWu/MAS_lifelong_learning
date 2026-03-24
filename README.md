@@ -72,28 +72,6 @@ from llmamem.memory import LLMAMem
 
 ---
 
-## Why This Repo
-
-This repository is intentionally cleaned and narrowed to <strong>LLMA-Mem only</strong>.
-
-What was removed:
-
-- MultiAgentBench datasets
-- MARBLE environment framework code
-- benchmark scripts
-- generated experiment outputs
-- Poetry-based workflow
-
-What remains:
-
-- the LLMA-Mem package
-- a local quickstart demo
-- direct-image documentation
-- lightweight tests
-
-The result is a smaller repo that is easier to install, understand, and plug into your own agent stack.
-
----
 
 ## Installation
 
@@ -122,12 +100,7 @@ Run the local demo:
 python3 examples/llma_mem_quickstart.py
 ```
 
-The demo is plug and play:
-
-- no external APIs required
-- embeddings are mocked locally
-- sample memory artifacts are written to `memory_store/demo/`
-- one agent writes memory and another agent retrieves it
+The demo is plug and play.
 
 ---
 
@@ -194,27 +167,3 @@ Current coverage includes:
 - episode persistence
 - transactive-memory updates
 - procedural-memory retrieval priority
-
----
-
-## Repository Layout
-
-```text
-llmamem/
-  llms/
-  memory/
-examples/
-images/
-tests/
-README.md
-requirements.txt
-setup.py
-```
-
----
-
-## Notes
-
-- `requirements.txt` is only needed for real LiteLLM-backed calls.
-- The package imports cleanly without those provider dependencies for local demo/testing.
-- Generated memory artifacts are written under `memory_store/` and ignored by git.
