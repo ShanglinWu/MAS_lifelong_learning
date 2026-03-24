@@ -17,10 +17,7 @@ import math
 import os
 from typing import Any, Dict, List, Optional
 
-import numpy as np
-from numpy.typing import NDArray
-from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
-
+from marble.memory.similarity import cosine_similarity
 from marble.llms.text_embedding import text_embedding
 
 
@@ -170,7 +167,6 @@ class EpisodicMemory:
 
         # Compute query embedding
         query_emb = text_embedding(model=self.EMBEDDING_MODEL, input=query)
-        query_emb_array = np.array(query_emb).reshape(1, -1)
 
         scored_episodes: List[tuple] = []
         for i, episode in enumerate(self.episodes):
@@ -178,8 +174,8 @@ class EpisodicMemory:
             recency = math.exp(episode["timestamp"] - current_time)
 
             # relevance(m, q) = cosine_similarity(embed(task_description), embed(query))
-            ep_emb = np.array(self.embeddings[i]).reshape(1, -1)
-            relevance = float(sklearn_cosine_similarity(ep_emb, query_emb_array)[0][0])
+            ep_emb = self.embeddings[i]
+            relevance = cosine_similarity(ep_emb, query_emb)
 
             # importance for episodic: based on outcome success
             importance = 1.0 if episode["outcome"].get("success", False) else 0.3
@@ -222,5 +218,5 @@ class EpisodicMemory:
             lessons_text = " ".join(ep.get("lessons_learned", []))
             if lessons_text.strip():
                 emb = text_embedding(model=self.EMBEDDING_MODEL, input=lessons_text)
-                result.append((ep, np.array(emb)))
+                result.append((ep, emb))
         return result

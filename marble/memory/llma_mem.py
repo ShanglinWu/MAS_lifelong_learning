@@ -22,16 +22,12 @@ Memory lifecycle:
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-import numpy as np
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
+from typing import Any, Dict, List, Optional, Tuple
 
 from marble.llms.model_prompting import model_prompting
-from marble.llms.text_embedding import text_embedding
 from marble.memory.episodic_memory import EpisodicMemory
 from marble.memory.procedural_memory import ProceduralMemory
+from marble.memory.similarity import cluster_by_similarity
 from marble.memory.transactive_memory import TransactiveMemory
 
 
@@ -540,34 +536,12 @@ class LLMAMem:
             return
 
         episodes = [e for e, _ in episodes_with_embeddings]
-        embeddings = np.array([emb for _, emb in episodes_with_embeddings])
-
-        # Cluster by lessons_learned similarity using embedding space
-        try:
-            # Compute distance matrix from cosine similarity
-            sim_matrix = sklearn_cosine_similarity(embeddings)
-            dist_matrix = 1.0 - sim_matrix
-            np.fill_diagonal(dist_matrix, 0)
-            # Clamp negative distances to 0
-            dist_matrix = np.maximum(dist_matrix, 0)
-
-            n_clusters = max(1, len(embeddings) // 2)
-            clustering = AgglomerativeClustering(
-                n_clusters=n_clusters,
-                metric="precomputed",
-                linkage="average",
-            )
-            labels = clustering.fit_predict(dist_matrix)
-        except Exception:
-            return
+        embeddings = [emb for _, emb in episodes_with_embeddings]
 
         # Group episodes by cluster
         clusters: Dict[int, List[Dict[str, Any]]] = {}
-        for i, label in enumerate(labels):
-            label_int = int(label)
-            if label_int not in clusters:
-                clusters[label_int] = []
-            clusters[label_int].append(episodes[i])
+        for cluster_id, member_indexes in enumerate(cluster_by_similarity(embeddings)):
+            clusters[cluster_id] = [episodes[index] for index in member_indexes]
 
         # Get existing source episode sets to avoid duplicates
         existing_source_sets = self.procedural.get_existing_source_sets()

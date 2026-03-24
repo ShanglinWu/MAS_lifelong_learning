@@ -17,9 +17,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Set
 
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
-
+from marble.memory.similarity import cosine_similarity
 from marble.llms.text_embedding import text_embedding
 
 
@@ -201,7 +199,6 @@ class ProceduralMemory:
 
         # Compute query embedding
         query_emb = text_embedding(model=self.EMBEDDING_MODEL, input=query)
-        query_emb_array = np.array(query_emb).reshape(1, -1)
 
         scored_procedures: List[tuple] = []
         for i, proc in enumerate(self.procedures):
@@ -210,10 +207,8 @@ class ProceduralMemory:
                 continue
 
             # relevance(m, q) = cosine_similarity(embed(title+content), embed(query))
-            proc_emb = np.array(self.embeddings[i]).reshape(1, -1)
-            relevance = float(
-                sklearn_cosine_similarity(proc_emb, query_emb_array)[0][0]
-            )
+            proc_emb = self.embeddings[i]
+            relevance = cosine_similarity(proc_emb, query_emb)
 
             # importance(p_j) = ρ_j (purely success rate)
             importance = proc["success_rate"]
